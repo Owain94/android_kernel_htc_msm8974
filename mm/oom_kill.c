@@ -559,8 +559,12 @@ void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 out:
 	read_unlock(&tasklist_lock);
 
-	if (killed && !test_thread_flag(TIF_MEMDIE))
-		schedule_timeout_uninterruptible(1);
+	/*
+	 * Give the killed threads a good chance of exiting before trying to
+	 * allocate memory again.
+	 */
+	if (killed)
+		schedule_timeout_killable(1);
 }
 
 void pagefault_out_of_memory(void)
@@ -569,6 +573,5 @@ void pagefault_out_of_memory(void)
 		out_of_memory(NULL, 0, 0, NULL, false);
 		clear_system_oom();
 	}
-	if (!test_thread_flag(TIF_MEMDIE))
-		schedule_timeout_uninterruptible(1);
+	schedule_timeout_killable(1);
 }
