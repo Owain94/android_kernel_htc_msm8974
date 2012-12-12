@@ -532,6 +532,7 @@ void clear_zonelist_oom(struct zonelist *zonelist, gfp_t gfp_mask)
 	spin_unlock(&zone_scan_lock);
 }
 
+<<<<<<< HEAD
 static int try_set_system_oom(void)
 {
 	struct zone *zone;
@@ -560,6 +561,21 @@ static void clear_system_oom(void)
 	spin_unlock(&zone_scan_lock);
 }
 
+=======
+/**
+ * out_of_memory - kill the "best" process when we run out of memory
+ * @zonelist: zonelist pointer
+ * @gfp_mask: memory allocation flags
+ * @order: amount of memory being requested as a power of 2
+ * @nodemask: nodemask passed to page allocator
+ * @force_kill: true if a task must be killed, even if others are exiting
+ *
+ * If we run out of memory, we have the choice between either
+ * killing a random task (bad), letting the system crash (worse)
+ * OR try to be smart about which process to kill. Note that we
+ * don't have to be perfect here, we just have to be good.
+ */
+>>>>>>> cdc8780... mm, oom: cleanup pagefault oom handler
 void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 		int order, nodemask_t *nodemask, bool force_kill)
 {
@@ -621,11 +637,22 @@ out:
 		schedule_timeout_killable(1);
 }
 
+<<<<<<< HEAD
+=======
+/*
+ * The pagefault handler calls here because it is out of memory, so kill a
+ * memory-hogging task.  If any populated zone has ZONE_OOM_LOCKED set, a
+ * parallel oom killing is already in progress so do nothing.
+ */
+>>>>>>> cdc8780... mm, oom: cleanup pagefault oom handler
 void pagefault_out_of_memory(void)
 {
-	if (try_set_system_oom()) {
+	struct zonelist *zonelist = node_zonelist(first_online_node,
+						  GFP_KERNEL);
+
+	if (try_set_zonelist_oom(zonelist, GFP_KERNEL)) {
 		out_of_memory(NULL, 0, 0, NULL, false);
-		clear_system_oom();
+		clear_zonelist_oom(zonelist, GFP_KERNEL);
 	}
 	schedule_timeout_killable(1);
 }
