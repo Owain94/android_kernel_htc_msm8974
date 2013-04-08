@@ -200,12 +200,12 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 	clear_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work))
 
 enum {
-	WQ_NON_REENTRANT	= 1 << 0,
-	WQ_UNBOUND		= 1 << 1,
-	WQ_FREEZABLE		= 1 << 2,
-	WQ_MEM_RECLAIM		= 1 << 3,
-	WQ_HIGHPRI		= 1 << 4,
-	WQ_CPU_INTENSIVE	= 1 << 5,
+	WQ_NON_REENTRANT	= 1 << 0, /* guarantee non-reentrance */
+	WQ_UNBOUND		= 1 << 1, /* not bound to any cpu */
+	WQ_FREEZABLE		= 1 << 2, /* freeze during suspend */
+	WQ_MEM_RECLAIM		= 1 << 3, /* may be used for memory reclaim */
+	WQ_HIGHPRI		= 1 << 4, /* high priority */
+	WQ_CPU_INTENSIVE	= 1 << 5, /* cpu instensive workqueue */
 
 	/*
 	 * Per-cpu workqueues are generally preferred because they tend to
@@ -234,11 +234,11 @@ enum {
 	 */
 	WQ_POWER_EFFICIENT	= 1 << 6,
 
-	WQ_DRAINING		= 1 << 7,
-	WQ_RESCUER		= 1 << 8,
+	WQ_DRAINING		= 1 << 7, /* internal: workqueue is draining */
+	WQ_RESCUER		= 1 << 8, /* internal: workqueue has rescuer */
 
-	WQ_MAX_ACTIVE		= 512,
-	WQ_MAX_UNBOUND_PER_CPU	= 4,
+	WQ_MAX_ACTIVE		= 512,	  /* I like 512, better ideas? */
+	WQ_MAX_UNBOUND_PER_CPU	= 4,	  /* 4 * #cpus for unbound wq */
 	WQ_DFL_ACTIVE		= WQ_MAX_ACTIVE / 2,
 };
 
