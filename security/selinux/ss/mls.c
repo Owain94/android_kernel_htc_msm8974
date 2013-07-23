@@ -33,18 +33,18 @@ int mls_compute_context_len(struct context *context)
 	if (!policydb.mls_enabled)
 		return 0;
 
-	len = 1; 
+	len = 1;
 	for (l = 0; l < 2; l++) {
 		int index_sens = context->range.level[l].sens;
 		len += strlen(sym_name(&policydb, SYM_LEVELS, index_sens - 1));
 
-		
+
 		head = -2;
 		prev = -2;
 		e = &context->range.level[l].cat;
 		ebitmap_for_each_positive_bit(e, node, i) {
 			if (i - prev > 1) {
-				
+
 				if (head != prev) {
 					nm = sym_name(&policydb, SYM_CATS, prev);
 					len += strlen(nm) + 1;
@@ -92,13 +92,13 @@ void mls_sid_to_context(struct context *context,
 					   context->range.level[l].sens - 1));
 		scontextp += strlen(scontextp);
 
-		
+
 		head = -2;
 		prev = -2;
 		e = &context->range.level[l].cat;
 		ebitmap_for_each_positive_bit(e, node, i) {
 			if (i - prev > 1) {
-				
+
 				if (prev != head) {
 					if (prev - head > 1)
 						*scontextp++ = '.';
@@ -146,8 +146,6 @@ void mls_sid_to_context(struct context *context,
 int mls_level_isvalid(struct policydb *p, struct mls_level *l)
 {
 	struct level_datum *levdatum;
-	struct ebitmap_node *node;
-	int i;
 
 	if (!l->sens || l->sens > p->p_levels.nprim)
 		return 0;
@@ -156,15 +154,13 @@ int mls_level_isvalid(struct policydb *p, struct mls_level *l)
 	if (!levdatum)
 		return 0;
 
-	ebitmap_for_each_positive_bit(&l->cat, node, i) {
-		if (i > p->p_cats.nprim)
-			return 0;
-		if (!ebitmap_get_bit(&levdatum->level->cat, i)) {
-			return 0;
-		}
-	}
-
-	return 1;
+	/*
+	 * Return 1 iff all the bits set in l->cat are also be set in
+	 * levdatum->level->cat and no bit in l->cat is larger than
+	 * p->p_cats.nprim.
+	 */
+	return ebitmap_contains(&levdatum->level->cat, &l->cat,
+				p->p_cats.nprim);
 }
 
 int mls_range_isvalid(struct policydb *p, struct mls_range *r)
@@ -191,7 +187,7 @@ int mls_context_isvalid(struct policydb *p, struct context *c)
 		return 0;
 	usrdatum = p->user_val_to_struct[c->user - 1];
 	if (!mls_range_contains(usrdatum->range, c->range))
-		return 0; 
+		return 0;
 
 	return 1;
 }
@@ -230,7 +226,7 @@ int mls_context_to_sid(struct policydb *pol,
 		goto out;
 	}
 
-	
+
 	scontextp = p = *scontext;
 	while (*p && *p != ':' && *p != '-')
 		p++;
@@ -249,7 +245,7 @@ int mls_context_to_sid(struct policydb *pol,
 		context->range.level[l].sens = levdatum->level->sens;
 
 		if (delim == ':') {
-			
+
 			while (1) {
 				scontextp = p;
 				while (*p && *p != ',' && *p != '-')
@@ -258,10 +254,10 @@ int mls_context_to_sid(struct policydb *pol,
 				if (delim != '\0')
 					*p++ = '\0';
 
-				
+
 				rngptr = strchr(scontextp, '.');
 				if (rngptr != NULL) {
-					
+
 					*rngptr++ = '\0';
 				}
 
@@ -277,7 +273,7 @@ int mls_context_to_sid(struct policydb *pol,
 				if (rc)
 					goto out;
 
-				
+
 				if (rngptr) {
 					int i;
 
@@ -304,7 +300,7 @@ int mls_context_to_sid(struct policydb *pol,
 			}
 		}
 		if (delim == '-') {
-			
+
 			scontextp = p;
 			while (*p && *p != ':')
 				p++;
@@ -354,7 +350,7 @@ int mls_range_set(struct context *context,
 {
 	int l, rc = 0;
 
-	
+
 	for (l = 0; l < 2; l++) {
 		context->range.level[l].sens = range->level[l].sens;
 		rc = ebitmap_cpy(&context->range.level[l].cat,
@@ -378,7 +374,7 @@ int mls_setup_user_range(struct context *fromcon, struct user_datum *user,
 		struct mls_level *usercon_sen = &(usercon->range.level[0]);
 		struct mls_level *usercon_clr = &(usercon->range.level[1]);
 
-		
+
 		if (mls_level_between(user_def, fromcon_sen, fromcon_clr))
 			*usercon_sen = *user_def;
 		else if (mls_level_between(fromcon_sen, user_def, user_clr))
@@ -455,26 +451,26 @@ int mls_compute_sid(struct context *scontext,
 
 	switch (specified) {
 	case AVTAB_TRANSITION:
-		
+
 		rtr.source_type = scontext->type;
 		rtr.target_type = tcontext->type;
 		rtr.target_class = tclass;
 		r = hashtab_search(policydb.range_tr, &rtr);
 		if (r)
 			return mls_range_set(newcontext, r);
-		
+
 	case AVTAB_CHANGE:
 		if ((tclass == policydb.process_class) || (sock == true))
-			
+
 			return mls_context_cpy(newcontext, scontext);
 		else
-			
+
 			return mls_context_cpy_low(newcontext, scontext);
 	case AVTAB_MEMBER:
-		
+
 		return mls_context_cpy_low(newcontext, scontext);
 
-	
+
 	}
 	return -EINVAL;
 }
@@ -541,4 +537,4 @@ import_netlbl_cat_failure:
 	ebitmap_destroy(&context->range.level[1].cat);
 	return rc;
 }
-#endif 
+#endif
