@@ -176,7 +176,7 @@ int mdss_mdp_wb_set_secure(struct msm_fb_data_type *mfd, int enable)
 	ctl->is_secure = enable;
 	wb->is_secure = enable;
 
-	
+
 	if (ctl->mdata->mdp_rev > MDSS_MDP_HW_REV_100)
 		return 0;
 
@@ -184,7 +184,7 @@ int mdss_mdp_wb_set_secure(struct msm_fb_data_type *mfd, int enable)
 
 	if (!enable) {
 		if (pipe) {
-			
+
 			mdss_mdp_mixer_pipe_unstage(pipe);
 			mdss_mdp_pipe_destroy(pipe);
 			wb->secure_pipe = NULL;
@@ -359,8 +359,8 @@ static struct mdss_mdp_wb_data *get_local_node(struct mdss_mdp_wb *wb,
 	if (!list_empty(&wb->register_queue)) {
 		list_for_each_entry(node, &wb->register_queue, registered_entry)
 		if (node->buf_info.iova == data->iova) {
-			pr_debug("found node iova=%x addr=%x\n",
-				 data->iova, node->buf_data.p[0].addr);
+			pr_debug("found node iova=%pa addr=%pa\n",
+				 &data->iova, &node->buf_data.p[0].addr);
 			return node;
 		}
 	}
@@ -375,7 +375,7 @@ static struct mdss_mdp_wb_data *get_local_node(struct mdss_mdp_wb *wb,
 	node->buf_info = *data;
 	buf = &node->buf_data.p[0];
 	buf->addr = (u32) (data->iova + data->offset);
-	buf->len = UINT_MAX; 
+	buf->len = UINT_MAX;
 	if (wb->is_secure)
 		buf->flags |= MDP_SECURE_OVERLAY_SESSION;
 	ret = mdss_mdp_wb_register_node(wb, node);
@@ -385,7 +385,8 @@ static struct mdss_mdp_wb_data *get_local_node(struct mdss_mdp_wb *wb,
 		return NULL;
 	}
 
-	pr_debug("register node iova=0x%x addr=0x%x\n", data->iova, buf->addr);
+	pr_debug("register node iova=0x%pa addr=0x%pa\n", &data->iova,
+								&buf->addr);
 
 	return node;
 }
@@ -398,6 +399,17 @@ static struct mdss_mdp_wb_data *get_user_node(struct msm_fb_data_type *mfd,
 	struct mdss_mdp_wb_data *node;
 	struct mdss_mdp_img_data *buf;
 	int ret;
+
+	if (!list_empty(&wb->register_queue)) {
+		list_for_each_entry(node, &wb->register_queue, registered_entry)
+			if ((node->buf_info.memory_id == data->memory_id) &&
+				    (node->buf_info.offset == data->offset)) {
+				pr_debug("found node fd=%x off=%x addr=%pa\n",
+						data->memory_id, data->offset,
+						&node->buf_data.p[0].addr);
+				return node;
+			}
+	}
 
 	node = kzalloc(sizeof(struct mdss_mdp_wb_data), GFP_KERNEL);
 	if (node == NULL) {
@@ -422,14 +434,30 @@ static struct mdss_mdp_wb_data *get_user_node(struct msm_fb_data_type *mfd,
 		goto register_fail;
 	}
 
-	pr_debug("register node mem_id=%d offset=%u addr=0x%x len=%d\n",
-		 data->memory_id, data->offset, buf->addr, buf->len);
+	pr_debug("register node mem_id=%d offset=%u addr=0x%pa len=%d\n",
+		 data->memory_id, data->offset, &buf->addr, buf->len);
 
 	return node;
 
 register_fail:
 	kfree(node);
 	return NULL;
+}
+
+static void mdss_mdp_wb_free_node(struct mdss_mdp_wb_data *node)
+{
+	struct mdss_mdp_img_data *buf;
+
+	if (node->user_alloc) {
+		buf = &node->buf_data.p[0];
+		pr_debug("free user node mem_id=%d offset=%u addr=0x%pa\n",
+				node->buf_info.memory_id,
+				node->buf_info.offset,
+				&buf->addr);
+
+		mdss_mdp_put_img(&node->buf_data.p[0]);
+		node->user_alloc = false;
+	}
 }
 
 static int mdss_mdp_wb_queue(struct msm_fb_data_type *mfd,
@@ -512,7 +540,7 @@ static int mdss_mdp_wb_dequeue(struct msm_fb_data_type *mfd,
 		memcpy(data, &node->buf_info, sizeof(*data));
 
 		buf = &node->buf_data.p[0];
-		pr_debug("found node addr=%x len=%d\n", buf->addr, buf->len);
+		pr_debug("found node addr=%pa len=%d\n", &buf->addr, buf->len);
 	} else {
 		pr_debug("node is NULL, wait for next\n");
 		ret = -ENOBUFS;
@@ -535,7 +563,7 @@ int mdss_mdp_wb_kickoff(struct msm_fb_data_type *mfd)
 	mutex_lock(&mdss_mdp_wb_buf_lock);
 	if (wb) {
 		mutex_lock(&wb->lock);
-		
+
 		if (ctl->play_cnt == 0)
 			mdss_mdp_wb_set_secure(ctl->mfd, wb->is_secure);
 		if (!list_empty(&wb->free_queue) && wb->state != WB_STOPING &&
@@ -557,7 +585,7 @@ int mdss_mdp_wb_kickoff(struct msm_fb_data_type *mfd)
 
 	if (wb_args.data == NULL) {
 		pr_err("unable to get writeback buf ctl=%d\n", ctl->num);
-		
+
 		ret = 0;
 		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_DONE);
 		goto kickoff_fail;

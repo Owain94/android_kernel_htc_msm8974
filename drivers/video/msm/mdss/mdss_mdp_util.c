@@ -268,7 +268,7 @@ int mdss_mdp_get_rau_strides(u32 w, u32 h,
 		} else
 			ps->ystride[1] = 32 * 2;
 
-		
+
 		ps->ystride[1] <<= 1;
 	} else if (fmt->fetch_planes == MDSS_MDP_PLANE_INTERLEAVED) {
 		ps->rau_cnt = DIV_ROUND_UP(w, 32);
@@ -372,7 +372,7 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
 				ps->num_planes = 2;
 				ps->plane_size[1] *= 2;
 				ps->ystride[1] *= 2;
-			} else { 
+			} else {
 				ps->num_planes = 3;
 				ps->plane_size[2] = ps->plane_size[1];
 				ps->ystride[2] = ps->ystride[1];
@@ -397,7 +397,7 @@ int mdss_mdp_data_check(struct mdss_mdp_data *data,
 	if (!data || data->num_planes == 0)
 		return -ENOMEM;
 
-	pr_debug("srcp0=%x len=%u frame_size=%u\n", data->p[0].addr,
+	pr_debug("srcp0=%pa len=%u frame_size=%u\n", &data->p[0].addr,
 		data->p[0].len, ps->total_size);
 
 	for (i = 0; i < ps->num_planes; i++) {
@@ -416,8 +416,8 @@ int mdss_mdp_data_check(struct mdss_mdp_data *data,
 			       curr->len, i, ps->plane_size[i]);
 			return -ENOMEM;
 		}
-		pr_debug("plane[%d] addr=%x len=%u\n", i,
-				curr->addr, curr->len);
+		pr_debug("plane[%d] addr=%pa len=%u\n", i,
+				&curr->addr, curr->len);
 	}
 	data->num_planes = ps->num_planes;
 
@@ -442,9 +442,9 @@ void mdss_mdp_data_calc_offset(struct mdss_mdp_data *data, u16 x, u16 y,
 
 		data->p[0].addr += x;
 		data->p[1].addr += xoff + (yoff * ps->ystride[1]);
-		if (data->num_planes == 2) 
+		if (data->num_planes == 2)
 			data->p[1].addr += xoff;
-		else 
+		else
 			data->p[2].addr += xoff + (yoff * ps->ystride[2]);
 	}
 }
@@ -453,14 +453,15 @@ int mdss_mdp_put_img(struct mdss_mdp_img_data *data)
 {
 	struct ion_client *iclient = mdss_get_ionclient();
 	if (data->flags & MDP_MEMORY_ID_TYPE_FB) {
-		pr_debug("fb mem buf=0x%x\n", data->addr);
+		pr_debug("fb mem buf=0x%pa\n", &data->addr);
 		fput_light(data->srcp_file, data->p_need);
 		data->srcp_file = NULL;
 	} else if (data->srcp_file) {
-		pr_debug("pmem buf=0x%x\n", data->addr);
+		pr_debug("pmem buf=0x%pa\n", &data->addr);
 		data->srcp_file = NULL;
-	} else if (!IS_ERR_OR_NULL(data->srcp_ihdl) && iclient) {
-		pr_debug("ion hdl=%p buf=0x%x\n", data->srcp_ihdl, data->addr);
+	} else if (!IS_ERR_OR_NULL(data->srcp_ihdl)) {
+		pr_debug("ion hdl=%p buf=0x%pa\n", data->srcp_ihdl,
+							&data->addr);
 
 		if (is_mdss_iommu_attached()) {
 			int domain;
@@ -492,10 +493,11 @@ int mdss_mdp_get_img(struct msmfb_data *img, struct mdss_mdp_img_data *data)
 	struct file *file;
 	int ret = -EINVAL;
 	int fb_num;
-	unsigned long *start, *len;
+	unsigned long *len;
+	dma_addr_t *start;
 	struct ion_client *iclient = mdss_get_ionclient();
 
-	start = (unsigned long *) &data->addr;
+	start = &data->addr;
 	len = (unsigned long *) &data->len;
 	data->flags |= img->flags;
 	data->p_need = 0;
@@ -575,8 +577,8 @@ int mdss_mdp_get_img(struct msmfb_data *img, struct mdss_mdp_img_data *data)
 		data->addr += img->offset;
 		data->len -= img->offset;
 
-		pr_debug("mem=%d ihdl=%p buf=0x%x len=0x%x\n", img->memory_id,
-			 data->srcp_ihdl, data->addr, data->len);
+		pr_debug("mem=%d ihdl=%p buf=0x%pa len=0x%x\n", img->memory_id,
+			 data->srcp_ihdl, &data->addr, data->len);
 	} else {
 		mdss_mdp_put_img(data);
 		return ret ? : -EOVERFLOW;
@@ -595,7 +597,7 @@ int mdss_mdp_calc_phase_step(u32 src, u32 dst, u32 *out_phase)
 	unit = 1 << PHASE_STEP_SHIFT;
 	*out_phase = mult_frac(src, unit, dst);
 
-	
+
 	if (src > dst) {
 		residue = *out_phase & (unit - 1);
 		if (residue && ((residue * dst) < (unit - residue)))

@@ -379,8 +379,7 @@ static int mdp3_ctrl_dma_init(struct msm_fb_data_type *mfd,
 	sourceConfig.x = 0;
 	sourceConfig.y = 0;
 	sourceConfig.stride = fix->line_length;
-	sourceConfig.buf = (void *)mfd->iova;
-	sourceConfig.vporch = vporch;
+	sourceConfig.buf = mfd->iova;
 	sourceConfig.vsync_count =
 		MDP_VSYNC_CLK_RATE / (frame_rate * vtotal);
 
@@ -431,7 +430,7 @@ static int mdp3_ctrl_on(struct msm_fb_data_type *mfd)
 		goto on_error;
 	}
 
-	
+
 	rc = mdp3_ctrl_res_req_bus(mfd, 1);
 	if (rc) {
 		pr_err("fail to request bus resource\n");
@@ -857,7 +856,7 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd,
 	}
 
 	if (mdp3_session->first_commit) {
-		
+
 		msleep(1000 / panel_info->mipi.frame_rate);
 		mdp3_session->first_commit = false;
 	}
@@ -924,7 +923,7 @@ static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd)
 	}
 
 	if (mdp3_session->first_commit) {
-		
+
 		msleep(1000 / panel_info->mipi.frame_rate);
 		mdp3_session->first_commit = false;
 	}
@@ -1164,7 +1163,7 @@ static int mdp3_bl_scale_config(struct msm_fb_data_type *mfd,
 	pr_debug("update scale = %d, min_lvl = %d\n", mfd->bl_scale,
 							mfd->bl_min_lvl);
 
-	
+
 	mdss_fb_set_backlight(mfd, curr_bl);
 	mutex_unlock(&mfd->bl_lock);
 	return ret;
