@@ -94,7 +94,7 @@ static int read_pages(struct address_space *mapping, struct file *filp,
 
 	if (mapping->a_ops->readpages) {
 		ret = mapping->a_ops->readpages(filp, mapping, pages, nr_pages);
-		
+
 		put_pages_list(pages);
 		goto out;
 	}
@@ -123,7 +123,7 @@ __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 {
 	struct inode *inode = mapping->host;
 	struct page *page;
-	unsigned long end_index;	
+	unsigned long end_index;
 	LIST_HEAD(page_pool);
 	int page_idx;
 	int ret = 0;
@@ -266,7 +266,11 @@ static int try_context_readahead(struct address_space *mapping,
 
 	size = count_history_pages(mapping, ra, offset, max);
 
-	if (!size <= req_size)
+	/*
+	 * not enough history pages:
+	 * it could be a random read
+	 */
+	if (size <= req_size)
 		return 0;
 
 	if (size >= offset)
@@ -309,7 +313,7 @@ ondemand_readahead(struct address_space *mapping,
 			return 0;
 
 		ra->start = start;
-		ra->size = start - offset;	
+		ra->size = start - offset;
 		ra->size += req_size;
 		ra->size = get_next_ra_size(ra, max);
 		ra->async_size = ra->size;
@@ -345,17 +349,17 @@ void page_cache_sync_readahead(struct address_space *mapping,
 			       struct file_ra_state *ra, struct file *filp,
 			       pgoff_t offset, unsigned long req_size)
 {
-	
+
 	if (!ra->ra_pages)
 		return;
 
-	
+
 	if (filp && (filp->f_mode & FMODE_RANDOM)) {
 		force_page_cache_readahead(mapping, filp, offset, req_size);
 		return;
 	}
 
-	
+
 	ondemand_readahead(mapping, ra, filp, false, offset, req_size);
 }
 EXPORT_SYMBOL_GPL(page_cache_sync_readahead);
@@ -366,7 +370,7 @@ page_cache_async_readahead(struct address_space *mapping,
 			   struct page *page, pgoff_t offset,
 			   unsigned long req_size)
 {
-	
+
 	if (!ra->ra_pages)
 		return;
 
@@ -378,7 +382,7 @@ page_cache_async_readahead(struct address_space *mapping,
 	if (bdi_read_congested(mapping->backing_dev_info))
 		return;
 
-	
+
 	ondemand_readahead(mapping, ra, filp, true, offset, req_size);
 }
 EXPORT_SYMBOL_GPL(page_cache_async_readahead);
