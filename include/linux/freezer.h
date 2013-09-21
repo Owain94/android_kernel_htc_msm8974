@@ -7,9 +7,9 @@
 #include <linux/atomic.h>
 
 #ifdef CONFIG_FREEZER
-extern atomic_t system_freezing_cnt;	
-extern bool pm_freezing;		
-extern bool pm_nosig_freezing;		
+extern atomic_t system_freezing_cnt;
+extern bool pm_freezing;
+extern bool pm_nosig_freezing;
 
 static inline bool frozen(struct task_struct *p)
 {
@@ -45,12 +45,12 @@ extern bool set_freezable(void);
 
 #ifdef CONFIG_CGROUP_FREEZER
 extern bool cgroup_freezing(struct task_struct *task);
-#else 
+#else
 static inline bool cgroup_freezing(struct task_struct *task)
 {
 	return false;
 }
-#endif 
+#endif
 
 
 
@@ -116,7 +116,16 @@ static inline int freezer_should_skip(struct task_struct *p)
 	__retval;							\
 })
 
-#else 
+#define wait_event_freezable_exclusive(wq, condition)		\
+({									\
+	int __retval;							\
+	freezer_do_not_count();						\
+	__retval = wait_event_interruptible_exclusive(wq, condition);	\
+	freezer_count();						\
+	__retval;							\
+})
+
+#else /* !CONFIG_FREEZER */
 static inline bool frozen(struct task_struct *p) { return false; }
 static inline bool freezing(struct task_struct *p) { return false; }
 static inline void __thaw_task(struct task_struct *t) {}
@@ -148,6 +157,6 @@ static inline void set_freezable(void) {}
 #define wait_event_freezekillable(wq, condition)		\
 		wait_event_killable(wq, condition)
 
-#endif 
+#endif
 
-#endif	
+#endif
