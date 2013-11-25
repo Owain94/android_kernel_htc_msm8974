@@ -65,13 +65,21 @@ static const struct mmc_fixup mmc_fixups[] = {
 	END_FIXUP
 };
 
+#ifdef CONFIG_ASYNC_FSYNC
+static unsigned int perf_degr;
+int emmc_perf_degr(void)
+{
+	return perf_degr;
+}
+#endif
+
 static int mmc_decode_cid(struct mmc_card *card)
 {
 	u32 *resp = card->raw_cid;
 
 	switch (card->csd.mmca_vsn) {
-	case 0: 
-	case 1: 
+	case 0:
+	case 1:
 		card->cid.manfid	= UNSTUFF_BITS(resp, 104, 24);
 		card->cid.prod_name[0]	= UNSTUFF_BITS(resp, 96, 8);
 		card->cid.prod_name[1]	= UNSTUFF_BITS(resp, 88, 8);
@@ -87,9 +95,9 @@ static int mmc_decode_cid(struct mmc_card *card)
 		card->cid.year		= UNSTUFF_BITS(resp, 8, 4) + 1997;
 		break;
 
-	case 2: 
-	case 3: 
-	case 4: 
+	case 2:
+	case 3:
+	case 4:
 		card->cid.manfid	= UNSTUFF_BITS(resp, 120, 8);
 		card->cid.oemid		= UNSTUFF_BITS(resp, 104, 16);
 		card->cid.prod_name[0]	= UNSTUFF_BITS(resp, 96, 8);
@@ -263,7 +271,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	if (!ext_csd)
 		return 0;
 
-	
+
 	card->ext_csd.raw_ext_csd_structure = ext_csd[EXT_CSD_STRUCTURE];
 	if (card->csd.structure == 3) {
 		if (card->ext_csd.raw_ext_csd_structure > 2) {
@@ -283,7 +291,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	}
 
-	
+
 	mmc_fixup_device(card, mmc_fixups);
 
 	card->ext_csd.raw_sectors[0] = ext_csd[EXT_CSD_SEC_CNT + 0];
@@ -297,7 +305,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_SEC_CNT + 2] << 16 |
 			ext_csd[EXT_CSD_SEC_CNT + 3] << 24;
 
-		
+
 		if (card->ext_csd.sectors > (2u * 1024 * 1024 * 1024) / 512)
 			mmc_card_set_blockaddr(card);
 	}
@@ -314,10 +322,10 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		u8 sa_shift = ext_csd[EXT_CSD_S_A_TIMEOUT];
 		card->ext_csd.part_config = ext_csd[EXT_CSD_PART_CONFIG];
 
-		
+
 		card->ext_csd.part_time = 10 * ext_csd[EXT_CSD_PART_SWITCH_TIME];
 
-		
+
 		if (sa_shift > 0 && sa_shift <= 0x17)
 			card->ext_csd.sa_timeout =
 					1 << ext_csd[EXT_CSD_S_A_TIMEOUT];
@@ -421,7 +429,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	if (card->ext_csd.rev >= 5) {
-		
+
 		if ((ext_csd[EXT_CSD_HPI_FEATURES] & 0x1) &&
 				!(card->quirks & MMC_QUIRK_BROKEN_HPI)) {
 			card->ext_csd.hpi = 1;
@@ -472,7 +480,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	else
 		card->erased_byte = 0x0;
 
-	
+
 	if (card->ext_csd.rev >= 6) {
 		card->ext_csd.feature_support |= MMC_DISCARD_FEATURE;
 
@@ -563,7 +571,7 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 	if (bus_width == MMC_BUS_WIDTH_1)
 		goto out;
 
-	
+
 	err = !((card->ext_csd.raw_partition_support ==
 			bw_ext_csd[EXT_CSD_PARTITION_SUPPORT]) &&
 		(card->ext_csd.raw_erased_mem_count ==
@@ -673,11 +681,11 @@ static int mmc_select_powerclass(struct mmc_card *card,
 	if (ext_csd == NULL)
 		return 0;
 
-	
+
 	if (card->csd.mmca_vsn < CSD_SPEC_VER_4)
 		return 0;
 
-	
+
 	if (bus_width == EXT_CSD_BUS_WIDTH_1)
 		return 0;
 
@@ -729,7 +737,7 @@ static int mmc_select_powerclass(struct mmc_card *card,
 		pwrclass_val = (pwrclass_val & EXT_CSD_PWR_CL_4BIT_MASK) >>
 				EXT_CSD_PWR_CL_4BIT_SHIFT;
 
-	
+
 	if (pwrclass_val > 0) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_POWER_CLASS,
@@ -771,7 +779,7 @@ static int mmc_select_bus_width(struct mmc_card *card, int ddr, u8 *ext_csd)
 	for (; idx < ARRAY_SIZE(bus_widths); idx++) {
 		bus_width = bus_widths[idx];
 		if (bus_width == MMC_BUS_WIDTH_1)
-			ddr = 0; 
+			ddr = 0;
 		err = mmc_select_powerclass(card, ext_csd_bits[idx][0],
 					    ext_csd);
 		if (err)
@@ -928,7 +936,7 @@ static int mmc_select_hs200(struct mmc_card *card, u8 *ext_csd)
 		if (mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120, 0))
 			err = mmc_set_signal_voltage(host,
 						     MMC_SIGNAL_VOLTAGE_180, 0);
-	
+
 	if (err)
 		goto out;
 
@@ -945,7 +953,7 @@ static int mmc_select_hs200(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	}
 
-	
+
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_HS_TIMING, 2, 0);
 
@@ -1006,7 +1014,7 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 		if (mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120, 0))
 				err = mmc_set_signal_voltage(host,
 						MMC_SIGNAL_VOLTAGE_180, 0);
-	
+
 	if (err)
 		goto out;
 
@@ -1018,7 +1026,7 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	mmc_card_clr_highspeed(card);
 
-	
+
 	err = mmc_select_hsddr(card, ext_csd);
 	if (err)
 		goto out;
@@ -1030,7 +1038,7 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	}
 
-	
+
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_HS_TIMING, 3, 0);
 	if (err && err != -EBADMSG) {
@@ -1180,16 +1188,16 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
-	
+
 	if (!mmc_host_is_spi(host))
 		mmc_set_bus_mode(host, MMC_BUSMODE_OPENDRAIN);
 
-	
+
 	mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330, 0);
 
 	mmc_go_idle(host);
 
-	
+
 	err = mmc_send_op_cond(host, ocr | (1 << 30), &rocr);
 	if (err)
 		goto err;
@@ -1267,7 +1275,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (!(mmc_card_blockaddr(card)) && (rocr & (1<<30)))
 			mmc_card_set_blockaddr(card);
 
-		
+
 		mmc_set_erase_size(card);
 
 		if (card->ext_csd.sectors && (rocr & MMC_CARD_SECTOR_ADDR))
@@ -1293,9 +1301,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 #if 0
-	
+
 	if (card->ext_csd.rev >= 6) {
-		
+
 		if (card->cid.manfid == SAMSUNG_MMC) {
 			if (card->ext_csd.sec_feature_support & EXT_CSD_SEC_SANITIZE)
 				card->need_sanitize = 1;
@@ -1431,7 +1439,7 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 	unsigned int timeout = card->ext_csd.generic_cmd6_time;
 	int err;
 
-	
+
 	if (notify_type == EXT_CSD_POWER_OFF_LONG)
 		timeout = card->ext_csd.power_off_longtime;
 
@@ -1442,7 +1450,7 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 		pr_err("%s: Power Off Notification timed out, %u\n",
 		       mmc_hostname(card->host), timeout);
 
-	
+
 	card->ext_csd.power_off_notification = EXT_CSD_NO_POWER_NOTIFICATION;
 
 	return err;
@@ -1578,7 +1586,7 @@ static int mmc_power_restore(struct mmc_host *host)
 {
 	int ret;
 
-	
+
 	mmc_disable_clk_scaling(host);
 
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
@@ -1666,7 +1674,7 @@ int mmc_attach_mmc(struct mmc_host *host)
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
-	
+
 	if (!mmc_host_is_spi(host))
 		mmc_set_bus_mode(host, MMC_BUSMODE_OPENDRAIN);
 
