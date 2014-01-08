@@ -89,7 +89,7 @@ enum mgr_intr {
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
 	CLK_GEAR	= 10,
-	ROOT_FREQ	= 22,
+	ROOT_FREQ	= 31,
 	REF_CLK_GEAR	= 15,
 	INTR_WAKE	= 19,
 };
@@ -319,7 +319,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 			wait_for_completion(&dev->reconf);
 			dev->reconf_busy = false;
 		}
-		
+
 		if (dev->ctrl.sched.usedslots != 0 &&
 			!dev->chan_active) {
 			int chv = msm_slim_get_ctrl(dev);
@@ -437,7 +437,7 @@ static void msm_slim_wait_retry(struct msm_slim_ctrl *dev)
 {
 	int msec_per_frm = 0;
 	int sfr_per_sec;
-	
+
 	sfr_per_sec = dev->framer.superfreq /
 			(1 << (SLIM_MAX_CLK_GEAR - dev->ctrl.clkgear));
 	if (sfr_per_sec)
@@ -494,7 +494,7 @@ static int msm_clk_pause_wakeup(struct slim_controller *ctrl)
 	enable_irq(dev->irq);
 	clk_prepare_enable(dev->rclk);
 	writel_relaxed(1, dev->base + FRM_WAKEUP);
-	
+
 	mb();
 	usleep_range(5000, 5000);
 	return 0;
@@ -514,7 +514,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		if (i >= sat->nsatch)
 			return -ENOTCONN;
 		oper = ((buf[3] & 0xC0) >> 6);
-		
+
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
 		if (!ret) {
@@ -556,7 +556,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 					return ret;
 				if (mc == SLIM_USR_MC_DEF_ACT_CHAN)
 					sat->satch[j].req_def++;
-				
+
 				if (i == 8)
 					grph = &sat->satch[j].chanh;
 				continue;
@@ -599,7 +599,7 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		else if (grph)
 			*grph = chh[0];
 
-		
+
 		if (mc == SLIM_USR_MC_DEF_ACT_CHAN)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
@@ -626,7 +626,7 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 
 			ret = slim_assign_laddr(&dev->ctrl, e_addr, 6, &laddr,
 						false);
-			
+
 			if (!ret && e_addr[5] == QC_MFGID_LSB &&
 				e_addr[4] == QC_MFGID_MSB &&
 				e_addr[1] == QC_DEVID_PGD &&
@@ -698,7 +698,7 @@ static void slim_sat_rxprocess(struct work_struct *work)
 		txn.ec = 0;
 		txn.rbuf = NULL;
 		txn.la = sat->satcl.laddr;
-		
+
 		len = buf[0] & 0x1F;
 		mc = buf[1];
 		mt = (buf[0] >> 5) & 0x7;
@@ -735,7 +735,7 @@ static void slim_sat_rxprocess(struct work_struct *work)
 		}
 		switch (mc) {
 		case SLIM_MSG_MC_REPORT_PRESENT:
-			
+
 			if (mt != SLIM_MSG_MT_CORE) {
 				if (pm_runtime_enabled(dev->dev) &&
 					sat->pending_capability) {
@@ -744,7 +744,7 @@ static void slim_sat_rxprocess(struct work_struct *work)
 				}
 				continue;
 			}
-			
+
 			if (sat->sent_capability) {
 				if (mt == SLIM_MSG_MT_CORE)
 					goto send_capability;
@@ -757,7 +757,7 @@ static void slim_sat_rxprocess(struct work_struct *work)
 					"Satellite-init failed");
 				continue;
 			}
-			
+
 			sat->satch = kzalloc(MSM_MAX_SATCH *
 					sizeof(struct msm_sat_chan),
 					GFP_KERNEL);
@@ -849,7 +849,7 @@ send_capability:
 			}
 			break;
 		case SLIM_USR_MC_REQ_BW:
-			
+
 			bw_sl = (u32)buf[4] << 3 |
 						((buf[3] & 0xE0) >> 5);
 			sat->satcl.pending_msgsl = bw_sl;
@@ -969,7 +969,7 @@ static int msm_slim_rx_msgq_thread(void *data)
 		if (ret)
 			dev_err(dev->dev, "rx thread wait error:%d", ret);
 
-		
+
 		if (dev->use_rx_msgqs != MSM_MSGQ_ENABLED) {
 			msm_slim_rxwq(dev);
 			continue;
@@ -983,7 +983,7 @@ static int msm_slim_rx_msgq_thread(void *data)
 
 		pr_debug("message[%d] = 0x%x\n", index, *buffer);
 
-		
+
 		if (index++ == 0) {
 			msg_len = *buffer & 0x1F;
 			pr_debug("Start of new message, len = %d\n", msg_len);
@@ -1018,7 +1018,7 @@ static void msm_slim_prg_slew(struct platform_device *pdev,
 {
 	struct resource *slew_io;
 	void __iomem *slew_reg;
-	
+
 	dev->slew_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"slimbus_slew_reg");
 	if (!dev->slew_mem) {
@@ -1042,7 +1042,7 @@ static void msm_slim_prg_slew(struct platform_device *pdev,
 		return;
 	}
 	writel_relaxed(1, slew_reg);
-	
+
 	wmb();
 	iounmap(slew_reg);
 }
@@ -1139,7 +1139,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 		}
 		rxreg_access = of_property_read_bool(pdev->dev.of_node,
 					"qcom,rxreg-access");
-		
+
 		ret = of_property_read_u32(pdev->dev.of_node,
 					"qcom,min-clk-gear", &dev->ctrl.min_cg);
 		ret = of_property_read_u32(pdev->dev.of_node,
@@ -1158,7 +1158,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	dev->ctrl.dealloc_port = msm_dealloc_port;
 	dev->ctrl.port_xfer = msm_slim_port_xfer;
 	dev->ctrl.port_xfer_status = msm_slim_port_xfer_status;
-	
+
 	dev->ctrl.sched.pending_msgsl = 30;
 
 	init_completion(&dev->reconf);
@@ -1185,7 +1185,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 		goto err_sps_init_failed;
 	}
 
-	
+
 	dev->rx_msgq_thread = kthread_run(msm_slim_rx_msgq_thread, dev,
 					MSM_SLIM_NAME "_rx_msgq_thread");
 	if (IS_ERR(dev->rx_msgq_thread)) {
@@ -1211,7 +1211,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 
 	msm_slim_prg_slew(pdev, dev);
 
-	
+
 	ret = slim_add_numbered_controller(&dev->ctrl);
 	if (ret) {
 		dev_err(dev->dev, "error adding controller\n");
@@ -1228,16 +1228,16 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	clk_prepare_enable(dev->rclk);
 
 	dev->ver = readl_relaxed(dev->base);
-	
+
 	dev->ver >>= 16;
-	
+
 	writel_relaxed(1, dev->base + CFG_PORT(COMP_CFG, dev->ver));
 	writel_relaxed((EE_MGR_RSC_GRP | EE_NGD_2 | EE_NGD_1),
 				dev->base + CFG_PORT(COMP_TRUST_CFG, dev->ver));
 
 	if (dev->use_rx_msgqs == MSM_MSGQ_ENABLED)
 		writel_relaxed((MGR_INT_RECFG_DONE | MGR_INT_TX_NACKED_2 |
-			MGR_INT_MSG_BUF_CONTE | 
+			MGR_INT_MSG_BUF_CONTE |
 			MGR_INT_TX_MSG_SENT), dev->base + MGR_INT_EN);
 	else
 		writel_relaxed((MGR_INT_RECFG_DONE | MGR_INT_TX_NACKED_2 |
@@ -1246,13 +1246,13 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	writel_relaxed(1, dev->base + MGR_CFG);
 	wmb();
 
-	
+
 	writel_relaxed((1 << INTR_WAKE) | (0xA << REF_CLK_GEAR) |
 		(0xA << CLK_GEAR) | (1 << ROOT_FREQ) | (1 << FRM_ACTIVE) | 1,
 		dev->base + FRM_CFG);
 	mb();
 
-	
+
 	if (dev->use_rx_msgqs == MSM_MSGQ_ENABLED)
 		writel_relaxed(MGR_CFG_ENABLE | MGR_CFG_RX_MSGQ_EN,
 					dev->base + MGR_CFG);
@@ -1281,7 +1281,7 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	writel_relaxed(1, dev->base + CFG_PORT(COMP_CFG, dev->ver));
 	mb();
 
-	
+
 	slim_ctrl_add_boarddevs(&dev->ctrl);
 
 	if (pdev->dev.of_node)
@@ -1433,7 +1433,7 @@ static int msm_slim_suspend(struct device *dev)
 
 static int msm_slim_resume(struct device *dev)
 {
-	
+
 	if (!pm_runtime_enabled(dev) || !pm_runtime_suspended(dev)) {
 		struct platform_device *pdev = to_platform_device(dev);
 		struct msm_slim_ctrl *cdev = platform_get_drvdata(pdev);
@@ -1451,7 +1451,7 @@ static int msm_slim_resume(struct device *dev)
 	}
 	return 0;
 }
-#endif 
+#endif
 
 static const struct dev_pm_ops msm_slim_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(
