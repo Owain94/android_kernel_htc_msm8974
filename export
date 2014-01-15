@@ -28,7 +28,7 @@ base=0x00000000
 kernel_offset=0x00008000
 ramdisk_offset=0x02008000
 tags_offset=0x01e00000
-cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=qcom user_debug=31 ehci-hcd.park=3 zcache eco_mode=0"
+cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=qcom user_debug=31 ehci-hcd.park=3 zcache eco_mode=1"
 
 function cleanme {
 	t1=$($DATE +%s)
