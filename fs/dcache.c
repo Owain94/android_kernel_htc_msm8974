@@ -22,11 +22,16 @@
 #include <linux/bit_spinlock.h>
 #include <linux/rculist_bl.h>
 #include <linux/prefetch.h>
+#include <linux/powersuspend.h>
 #include <linux/ratelimit.h>
 #include "internal.h"
 #include "mount.h"
 
-int sysctl_vfs_cache_pressure __read_mostly = 100;
+#define DEFAULT_VFS_CACHE_PRESSURE 60
+#define DEFAULT_VFS_SUSPEND_CACHE_PRESSURE 20
+int sysctl_vfs_cache_pressure __read_mostly, resume_cache_pressure;
+int sysctl_vfs_suspend_cache_pressure __read_mostly, suspend_cache_pressure;
+
 EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
 
 static __cacheline_aligned_in_smp DEFINE_SPINLOCK(dcache_lru_lock);
@@ -131,7 +136,7 @@ static void __d_free(struct rcu_head *head)
 	WARN_ON(!list_empty(&dentry->d_alias));
 	if (dname_external(dentry))
 		kfree(dentry->d_name.name);
-	kmem_cache_free(dentry_cache, dentry); 
+	kmem_cache_free(dentry_cache, dentry);
 }
 
 static void d_free(struct dentry *dentry)
@@ -141,7 +146,7 @@ static void d_free(struct dentry *dentry)
 	if (dentry->d_op && dentry->d_op->d_release)
 		dentry->d_op->d_release(dentry);
 
-	
+
 	if (!(dentry->d_flags & DCACHE_RCUACCESS))
 		__d_free(&dentry->d_u.d_rcu);
 	else
@@ -151,7 +156,7 @@ static void d_free(struct dentry *dentry)
 static inline void dentry_rcuwalk_barrier(struct dentry *dentry)
 {
 	assert_spin_locked(&dentry->d_lock);
-	
+
 	write_seqcount_barrier(&dentry->d_seq);
 }
 
@@ -314,7 +319,7 @@ static inline struct dentry *dentry_kill(struct dentry *dentry, int ref)
 relock:
 		spin_unlock(&dentry->d_lock);
 		cpu_relax();
-		return dentry; 
+		return dentry;
 	}
 	if (IS_ROOT(dentry))
 		parent = NULL;
@@ -329,7 +334,7 @@ relock:
 	if (ref)
 		dentry->d_count--;
 	dentry_lru_prune(dentry);
-	
+
 	__d_drop(dentry);
 	return d_kill(dentry, parent);
 }
@@ -356,7 +361,7 @@ repeat:
 			goto kill_it;
 	}
 
-	
+
  	if (d_unhashed(dentry))
 		goto kill_it;
 
@@ -375,7 +380,7 @@ kill_it:
 }
 EXPORT_SYMBOL(dput);
 
- 
+
 int d_invalidate(struct dentry * dentry)
 {
 	spin_lock(&dentry->d_lock);
@@ -517,7 +522,7 @@ static void try_prune_one_dentry(struct dentry *dentry)
 	if (parent == dentry)
 		return;
 
-	
+
 	dentry = parent;
 	while (dentry) {
 		spin_lock(&dentry->d_lock);
@@ -538,7 +543,7 @@ static void shrink_dentry_list(struct list_head *list)
 	for (;;) {
 		dentry = list_entry_rcu(list->prev, struct dentry, d_lru);
 		if (&dentry->d_lru == list)
-			break; 
+			break;
 		spin_lock(&dentry->d_lock);
 		if (dentry != list_entry(list->prev, struct dentry, d_lru)) {
 			spin_unlock(&dentry->d_lock);
@@ -621,7 +626,7 @@ static void shrink_dcache_for_umount_subtree(struct dentry *dentry)
 	BUG_ON(!IS_ROOT(dentry));
 
 	for (;;) {
-		
+
 		while (!list_empty(&dentry->d_subdirs))
 			dentry = list_entry(dentry->d_subdirs.next,
 					    struct dentry, d_u.d_child);
@@ -715,7 +720,7 @@ static struct dentry *try_to_ascend(struct dentry *old, int locked, unsigned seq
 }
 
 
- 
+
 int have_submounts(struct dentry *parent)
 {
 	struct dentry *this_parent;
@@ -739,7 +744,7 @@ resume:
 		next = tmp->next;
 
 		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
-		
+
 		if (d_mountpoint(dentry)) {
 			spin_unlock(&dentry->d_lock);
 			spin_unlock(&this_parent->d_lock);
@@ -767,7 +772,7 @@ resume:
 		goto rename_retry;
 	if (locked)
 		write_sequnlock(&rename_lock);
-	return 0; 
+	return 0;
 positive:
 	if (!locked && read_seqretry(&rename_lock, seq))
 		goto rename_retry;
@@ -860,7 +865,7 @@ void shrink_dcache_parent(struct dentry * parent)
 }
 EXPORT_SYMBOL(shrink_dcache_parent);
 
- 
+
 struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 {
 	struct dentry *dentry;
@@ -873,12 +878,12 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	if (name->len > DNAME_INLINE_LEN-1) {
 		dname = kmalloc(name->len + 1, GFP_KERNEL);
 		if (!dname) {
-			kmem_cache_free(dentry_cache, dentry); 
+			kmem_cache_free(dentry_cache, dentry);
 			return NULL;
 		}
 	} else  {
 		dname = dentry->d_iname;
-	}	
+	}
 	dentry->d_name.name = dname;
 
 	dentry->d_name.len = name->len;
@@ -981,7 +986,7 @@ static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 	fsnotify_d_instantiate(dentry, inode);
 }
 
- 
+
 void d_instantiate(struct dentry *entry, struct inode * inode)
 {
 	BUG_ON(!list_empty(&entry->d_alias));
@@ -1116,7 +1121,7 @@ struct dentry *d_obtain_alias(struct inode *inode)
 		goto out_iput;
 	}
 
-	
+
 	spin_lock(&tmp->d_lock);
 	tmp->d_inode = inode;
 	tmp->d_flags |= DCACHE_DISCONNECTED;
@@ -1155,7 +1160,7 @@ struct dentry *d_splice_alias(struct inode *inode, struct dentry *dentry)
 			d_move(new, dentry);
 			iput(inode);
 		} else {
-			
+
 			__d_instantiate(dentry, inode);
 			spin_unlock(&inode->i_lock);
 			security_d_instantiate(dentry, inode);
@@ -1192,7 +1197,7 @@ struct dentry *d_add_ci(struct dentry *dentry, struct inode *inode,
 
 	if (found->d_inode) {
 		if (unlikely(found->d_inode != inode)) {
-			
+
 			BUG_ON(!is_bad_inode(inode));
 			BUG_ON(!is_bad_inode(found->d_inode));
 		}
@@ -1292,7 +1297,7 @@ struct dentry *__d_lookup(struct dentry *parent, struct qstr *name)
 
 
 	rcu_read_lock();
-	
+
 	hlist_bl_for_each_entry_rcu(dentry, node, b, d_hash) {
 		const char *tname;
 		int tlen;
@@ -1364,8 +1369,8 @@ int d_validate(struct dentry *dentry, struct dentry *dparent)
 }
 EXPORT_SYMBOL(d_validate);
 
- 
- 
+
+
 void d_delete(struct dentry * dentry)
 {
 	struct inode *inode;
@@ -1409,7 +1414,7 @@ static void _d_rehash(struct dentry * entry)
 	__d_rehash(entry, d_hash(entry->d_parent, entry->d_name.hash));
 }
 
- 
+
 void d_rehash(struct dentry * entry)
 {
 	spin_lock(&entry->d_lock);
@@ -1421,7 +1426,7 @@ EXPORT_SYMBOL(d_rehash);
 void dentry_update_name_case(struct dentry *dentry, struct qstr *name)
 {
 	BUG_ON(!mutex_is_locked(&dentry->d_parent->d_inode->i_mutex));
-	BUG_ON(dentry->d_name.len != name->len); 
+	BUG_ON(dentry->d_name.len != name->len);
 
 	spin_lock(&dentry->d_lock);
 	write_seqcount_begin(&dentry->d_seq);
@@ -1504,22 +1509,22 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	write_seqcount_begin(&dentry->d_seq);
 	write_seqcount_begin(&target->d_seq);
 
-	
+
 
 	__d_drop(dentry);
 	__d_rehash(dentry, d_hash(target->d_parent, target->d_name.hash));
 
-	
+
 	__d_drop(target);
 
 	list_del(&dentry->d_u.d_child);
 	list_del(&target->d_u.d_child);
 
-	
+
 	switch_names(dentry, target);
 	swap(dentry->d_name.hash, target->d_name.hash);
 
-	
+
 	if (IS_ROOT(dentry)) {
 		dentry->d_parent = target->d_parent;
 		target->d_parent = target;
@@ -1527,7 +1532,7 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	} else {
 		swap(dentry->d_parent, target->d_parent);
 
-		
+
 		list_add(&target->d_u.d_child, &target->d_parent->d_subdirs);
 	}
 
@@ -1567,11 +1572,11 @@ static struct dentry *__d_unalias(struct inode *inode,
 	struct mutex *m1 = NULL, *m2 = NULL;
 	struct dentry *ret;
 
-	
+
 	if (alias->d_parent == dentry->d_parent)
 		goto out_unalias;
 
-	
+
 	ret = ERR_PTR(-EBUSY);
 	if (!mutex_trylock(&dentry->d_sb->s_vfs_rename_mutex))
 		goto out_err;
@@ -1626,7 +1631,7 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	dentry_unlock_parents_for_move(anon, dentry);
 	spin_unlock(&dentry->d_lock);
 
-	
+
 	anon->d_flags &= ~DCACHE_DISCONNECTED;
 }
 
@@ -1648,14 +1653,14 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 	if (S_ISDIR(inode->i_mode)) {
 		struct dentry *alias;
 
-		
+
 		alias = __d_find_alias(inode, 0);
 		if (alias) {
 			actual = alias;
 			write_seqlock(&rename_lock);
 
 			if (d_ancestor(alias, dentry)) {
-				
+
 				actual = ERR_PTR(-ELOOP);
 				spin_unlock(&inode->i_lock);
 			} else if (IS_ROOT(alias)) {
@@ -1681,7 +1686,7 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 		}
 	}
 
-	
+
 	actual = __d_instantiate_unique(dentry, inode);
 	if (!actual)
 		actual = dentry;
@@ -1734,7 +1739,7 @@ static int prepend_path(const struct path *path,
 		struct dentry * parent;
 
 		if (dentry == vfsmnt->mnt_root || IS_ROOT(dentry)) {
-			
+
 			if (!mnt_has_parent(mnt))
 				goto global_root;
 			dentry = mnt->mnt_mountpoint;
@@ -1901,7 +1906,7 @@ static char *__dentry_path(struct dentry *dentry, char *buf, int buflen)
 	prepend(&end, &buflen, "\0", 1);
 	if (buflen < 1)
 		goto Elong;
-	
+
 	retval = end-1;
 	*retval = '/';
 
@@ -1951,7 +1956,7 @@ char *dentry_path(struct dentry *dentry, char *buf, int buflen)
 	retval = __dentry_path(dentry, buf, buflen);
 	write_sequnlock(&rename_lock);
 	if (!IS_ERR(retval) && p)
-		*p = '/';	
+		*p = '/';
 	return retval;
 Elong:
 	return ERR_PTR(-ENAMETOOLONG);
@@ -1982,7 +1987,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 		if (error < 0)
 			goto out;
 
-		
+
 		if (error > 0) {
 			error = prepend_unreachable(&cwd, &buflen);
 			if (error)
@@ -2008,7 +2013,7 @@ out:
 }
 
 
-  
+
 int is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
 {
 	int result;
@@ -2018,7 +2023,7 @@ int is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
 		return 1;
 
 	do {
-		
+
 		seq = read_seqbegin(&rename_lock);
 		rcu_read_lock();
 		if (d_ancestor(old_dentry, new_dentry))
@@ -2093,7 +2098,7 @@ rename_retry:
 	goto again;
 }
 
- 
+
 ino_t find_inode_number(struct dentry *dir, struct qstr *name)
 {
 	struct dentry * dentry;
@@ -2108,6 +2113,27 @@ ino_t find_inode_number(struct dentry *dir, struct qstr *name)
 	return ino;
 }
 EXPORT_SYMBOL(find_inode_number);
+
+static void cpressure_early_suspend(struct power_suspend *handler)
+{
+	if (sysctl_vfs_cache_pressure != resume_cache_pressure)
+		resume_cache_pressure = sysctl_vfs_cache_pressure;
+
+	sysctl_vfs_cache_pressure = suspend_cache_pressure;
+}
+
+static void cpressure_late_resume(struct power_suspend *handler)
+{
+	if (sysctl_vfs_cache_pressure != suspend_cache_pressure)
+		suspend_cache_pressure = sysctl_vfs_cache_pressure;
+
+	sysctl_vfs_cache_pressure = resume_cache_pressure;
+}
+
+static struct power_suspend cpressure_suspend = {
+	.suspend = cpressure_early_suspend,
+	.resume = cpressure_late_resume,
+};
 
 static __initdata unsigned long dhash_entries;
 static int __init set_dhash_entries(char *str)
@@ -2147,7 +2173,7 @@ static void __init dcache_init(void)
 	dentry_cache = KMEM_CACHE(dentry,
 		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD);
 
-	
+
 	if (!hashdist)
 		return;
 
@@ -2172,6 +2198,11 @@ EXPORT_SYMBOL(d_genocide);
 
 void __init vfs_caches_init_early(void)
 {
+	sysctl_vfs_cache_pressure = resume_cache_pressure =
+		DEFAULT_VFS_CACHE_PRESSURE;
+	sysctl_vfs_suspend_cache_pressure = suspend_cache_pressure =
+		DEFAULT_VFS_SUSPEND_CACHE_PRESSURE;
+
 	dcache_init_early();
 	inode_init_early();
 }
@@ -2193,4 +2224,6 @@ void __init vfs_caches_init(unsigned long mempages)
 	mnt_init();
 	bdev_cache_init();
 	chrdev_init();
+
+	register_power_suspend(&cpressure_suspend);
 }

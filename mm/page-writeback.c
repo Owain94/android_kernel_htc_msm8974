@@ -32,10 +32,11 @@
 #include <linux/sysctl.h>
 #include <linux/cpu.h>
 #include <linux/syscalls.h>
-#include <linux/buffer_head.h> 
+#include <linux/buffer_head.h>
 #include <linux/pagevec.h>
 #include <linux/mm_inline.h>
 #include <trace/events/writeback.h>
+#include <linux/powersuspend.h>
 
 #include "internal.h"
 
@@ -60,11 +61,27 @@ int vm_dirty_ratio = 20;
 
 unsigned long vm_dirty_bytes;
 
-unsigned int dirty_writeback_interval = 5 * 100; 
+/*
+ * The interval between `kupdate'-style writebacks
+ */
+#define DEFAULT_DIRTY_WRITEBACK_INTERVAL 600 /* centiseconds */
+#define DEFAULT_SUSPEND_DIRTY_WRITEBACK_INTERVAL 6000 /* centiseconds */
+unsigned int dirty_writeback_interval,
+	resume_dirty_writeback_interval;
+unsigned int sleep_dirty_writeback_interval,
+	suspend_dirty_writeback_interval;
 
 EXPORT_SYMBOL_GPL(dirty_writeback_interval);
 
-unsigned int dirty_expire_interval = 30 * 100; 
+/*
+ * The longest time for which data is allowed to remain dirty
+ */
+#define DEFAULT_DIRTY_EXPIRE_INTERVAL 3000 /* centiseconds */
+#define DEFAULT_SUSPEND_DIRTY_EXPIRE_INTERVAL 12000 /* centiseconds */
+unsigned int dirty_expire_interval,
+	resume_dirty_expire_interval;
+unsigned int sleep_dirty_expire_interval,
+	suspend_dirty_expire_interval;
 
 int block_dump;
 
@@ -131,7 +148,7 @@ unsigned long global_dirtyable_memory(void)
 	if (!vm_highmem_is_dirtyable)
 		x -= min(x, highmem_dirtyable_memory(x));
 
-	return x + 1;	
+	return x + 1;
 }
 
 void global_dirty_limits(unsigned long *pbackground, unsigned long *pdirty)
@@ -381,10 +398,10 @@ static unsigned long bdi_position_ratio(struct backing_dev_info *bdi,
 	unsigned long freerun = dirty_freerun_ceiling(thresh, bg_thresh);
 	unsigned long limit = hard_dirty_limit(thresh);
 	unsigned long x_intercept;
-	unsigned long setpoint;		
+	unsigned long setpoint;
 	unsigned long bdi_setpoint;
 	unsigned long span;
-	long long pos_ratio;		
+	long long pos_ratio;
 	long x;
 
 	if (unlikely(dirty >= limit))
@@ -525,7 +542,7 @@ static void bdi_update_dirty_ratelimit(struct backing_dev_info *bdi,
 				       bdi_thresh, bdi_dirty);
 	task_ratelimit = (u64)dirty_ratelimit *
 					pos_ratio >> RATELIMIT_CALC_SHIFT;
-	task_ratelimit++; 
+	task_ratelimit++;
 
 	balanced_dirty_ratelimit = div_u64((u64)task_ratelimit * write_bw,
 					   dirty_rate | 1);
@@ -641,11 +658,11 @@ static long bdi_min_pause(struct backing_dev_info *bdi,
 {
 	long hi = ilog2(bdi->avg_write_bandwidth);
 	long lo = ilog2(bdi->dirty_ratelimit);
-	long t;		
-	long pause;	
-	int pages;	
+	long t;
+	long pause;
+	int pages;
 
-	
+
 	t = max(1, HZ / 100);
 
 	if (hi > lo)
@@ -676,9 +693,9 @@ static long bdi_min_pause(struct backing_dev_info *bdi,
 static void balance_dirty_pages(struct address_space *mapping,
 				unsigned long pages_dirtied)
 {
-	unsigned long nr_reclaimable;	
+	unsigned long nr_reclaimable;
 	unsigned long bdi_reclaimable;
-	unsigned long nr_dirty;  
+	unsigned long nr_dirty;
 	unsigned long bdi_dirty;
 	unsigned long freerun;
 	unsigned long background_thresh;
@@ -789,7 +806,7 @@ static void balance_dirty_pages(struct address_space *mapping,
 			break;
 		}
 		if (unlikely(pause > max_pause)) {
-			
+
 			now += min(pause - max_pause, max_pause);
 			pause = max_pause;
 		}
@@ -895,7 +912,7 @@ void throttle_vm_writeout(gfp_t gfp_mask)
 		global_dirty_limits(&background_thresh, &dirty_thresh);
 		dirty_thresh = hard_dirty_limit(dirty_thresh);
 
-                dirty_thresh += dirty_thresh / 10;      
+                dirty_thresh += dirty_thresh / 10;
 
                 if (global_page_state(NR_UNSTABLE_NFS) +
 			global_page_state(NR_WRITEBACK) <= dirty_thresh)
@@ -973,9 +990,65 @@ static struct notifier_block __cpuinitdata ratelimit_nb = {
 	.next		= NULL,
 };
 
+static void dirty_early_suspend(struct power_suspend *handler)
+{
+	if (dirty_writeback_interval != resume_dirty_writeback_interval)
+		resume_dirty_writeback_interval = dirty_writeback_interval;
+	if (dirty_expire_interval != resume_dirty_expire_interval)
+		resume_dirty_expire_interval = dirty_expire_interval;
+
+	dirty_writeback_interval = suspend_dirty_writeback_interval;
+	dirty_expire_interval = suspend_dirty_expire_interval;
+}
+
+static void dirty_late_resume(struct power_suspend *handler)
+{
+	if (dirty_writeback_interval != suspend_dirty_writeback_interval)
+		suspend_dirty_writeback_interval = dirty_writeback_interval;
+	if (dirty_expire_interval != suspend_dirty_expire_interval)
+		suspend_dirty_expire_interval = dirty_expire_interval;
+
+	dirty_writeback_interval = resume_dirty_writeback_interval;
+	dirty_expire_interval = resume_dirty_expire_interval;
+}
+
+static struct power_suspend dirty_suspend = {
+	.suspend = dirty_early_suspend,
+	.resume = dirty_late_resume,
+};
+
+/*
+ * Called early on to tune the page writeback dirty limits.
+ *
+ * We used to scale dirty pages according to how total memory
+ * related to pages that could be allocated for buffers (by
+ * comparing nr_free_buffer_pages() to vm_total_pages.
+ *
+ * However, that was when we used "dirty_ratio" to scale with
+ * all memory, and we don't do that any more. "dirty_ratio"
+ * is now applied to total non-HIGHPAGE memory (by subtracting
+ * totalhigh_pages from vm_total_pages), and as such we can't
+ * get into the old insane situation any more where we had
+ * large amounts of dirty pages compared to a small amount of
+ * non-HIGHMEM memory.
+ *
+ * But we might still want to scale the dirty_ratio by how
+ * much memory the box has..
+ */
 void __init page_writeback_init(void)
 {
 	int shift;
+
+	dirty_writeback_interval = resume_dirty_writeback_interval =
+		DEFAULT_DIRTY_WRITEBACK_INTERVAL;
+	dirty_expire_interval = resume_dirty_expire_interval =
+		DEFAULT_DIRTY_EXPIRE_INTERVAL;
+	sleep_dirty_writeback_interval = suspend_dirty_writeback_interval =
+		DEFAULT_SUSPEND_DIRTY_WRITEBACK_INTERVAL;
+	sleep_dirty_expire_interval = suspend_dirty_expire_interval =
+		DEFAULT_SUSPEND_DIRTY_EXPIRE_INTERVAL;
+
+	register_power_suspend(&dirty_suspend);
 
 	writeback_set_ratelimit();
 	register_cpu_notifier(&ratelimit_nb);
@@ -1012,7 +1085,7 @@ void tag_pages_for_writeback(struct address_space *mapping,
 		spin_unlock_irq(&mapping->tree_lock);
 		WARN_ON_ONCE(tagged > WRITEBACK_TAG_BATCH);
 		cond_resched();
-		
+
 	} while (tagged >= WRITEBACK_TAG_BATCH && start);
 }
 EXPORT_SYMBOL(tag_pages_for_writeback);
@@ -1049,7 +1122,7 @@ int write_cache_pages(struct address_space *mapping,
 	int nr_pages;
 	pgoff_t uninitialized_var(writeback_index);
 	pgoff_t index;
-	pgoff_t end;		
+	pgoff_t end;
 	pgoff_t done_index;
 	int cycled;
 	int range_whole = 0;
@@ -1057,7 +1130,7 @@ int write_cache_pages(struct address_space *mapping,
 
 	pagevec_init(&pvec, 0);
 	if (wbc->range_cyclic) {
-		writeback_index = mapping->writeback_index; 
+		writeback_index = mapping->writeback_index;
 		index = writeback_index;
 		if (index == 0)
 			cycled = 1;
@@ -1069,7 +1142,7 @@ int write_cache_pages(struct address_space *mapping,
 		end = wbc->range_end >> PAGE_CACHE_SHIFT;
 		if (wbc->range_start == 0 && wbc->range_end == LLONG_MAX)
 			range_whole = 1;
-		cycled = 1; 
+		cycled = 1;
 	}
 	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
 		tag = PAGECACHE_TAG_TOWRITE;
@@ -1106,7 +1179,7 @@ continue_unlock:
 			}
 
 			if (!PageDirty(page)) {
-				
+
 				goto continue_unlock;
 			}
 
@@ -1185,7 +1258,7 @@ int generic_writepages(struct address_space *mapping,
 	struct blk_plug plug;
 	int ret;
 
-	
+
 	if (!mapping->a_ops->writepage)
 		return 0;
 
@@ -1278,7 +1351,7 @@ int __set_page_dirty_nobuffers(struct page *page)
 
 		spin_lock_irq(&mapping->tree_lock);
 		mapping2 = page_mapping(page);
-		if (mapping2) { 
+		if (mapping2) {
 			BUG_ON(mapping2 != mapping);
 			WARN_ON_ONCE(!PagePrivate(page) && !PageUptodate(page));
 			account_page_dirtied(page, mapping);
@@ -1287,7 +1360,7 @@ int __set_page_dirty_nobuffers(struct page *page)
 		}
 		spin_unlock_irq(&mapping->tree_lock);
 		if (mapping->host) {
-			
+
 			__mark_inode_dirty(mapping->host, I_DIRTY_PAGES);
 		}
 		return 1;
