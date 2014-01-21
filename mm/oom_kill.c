@@ -72,22 +72,44 @@ int test_set_oom_score_adj(int new_val)
 }
 
 #ifdef CONFIG_NUMA
-static bool has_intersects_mems_allowed(struct task_struct *tsk,
+/**
+ * has_intersects_mems_allowed() - check task eligiblity for kill
+ * @start: task struct of which task to consider
+ * @mask: nodemask passed to page allocator for mempolicy ooms
+ *
+ * Task eligibility is determined by whether or not a candidate task, @tsk,
+ * shares the same mempolicy nodes as current if it is bound by such a policy
+ * and whether or not it has the same set of allowed cpuset nodes.
+ */
+static bool has_intersects_mems_allowed(struct task_struct *start,
 					const nodemask_t *mask)
 {
-	struct task_struct *start = tsk;
+	struct task_struct *tsk;
+	bool ret = false;
 
+	rcu_read_lock();
 	for_each_thread(start, tsk) {
 		if (mask) {
-			if (mempolicy_nodemask_intersects(tsk, mask))
-				return true;
+			/*
+			 * If this is a mempolicy constrained oom, tsk's
+			 * cpuset is irrelevant.  Only return true if its
+			 * mempolicy intersects current, otherwise it may be
+			 * needlessly killed.
+			 */
+			ret = mempolicy_nodemask_intersects(tsk, mask);
 		} else {
-			if (cpuset_mems_allowed_intersects(current, tsk))
-				return true;
+			/*
+			 * This is not a mempolicy constrained oom, so only
+			 * check the mems of tsk's cpuset.
+			 */
+			ret = cpuset_mems_allowed_intersects(current, tsk);
 		}
+		if (ret)
+			break;
 	}
+	rcu_read_unlock();
 
-	return false;
+	return ret;
 }
 #else
 static bool has_intersects_mems_allowed(struct task_struct *tsk,
@@ -532,36 +554,6 @@ void clear_zonelist_oom(struct zonelist *zonelist, gfp_t gfp_mask)
 	spin_unlock(&zone_scan_lock);
 }
 
-<<<<<<< HEAD
-static int try_set_system_oom(void)
-{
-	struct zone *zone;
-	int ret = 1;
-
-	spin_lock(&zone_scan_lock);
-	for_each_populated_zone(zone)
-		if (zone_is_oom_locked(zone)) {
-			ret = 0;
-			goto out;
-		}
-	for_each_populated_zone(zone)
-		zone_set_flag(zone, ZONE_OOM_LOCKED);
-out:
-	spin_unlock(&zone_scan_lock);
-	return ret;
-}
-
-static void clear_system_oom(void)
-{
-	struct zone *zone;
-
-	spin_lock(&zone_scan_lock);
-	for_each_populated_zone(zone)
-		zone_clear_flag(zone, ZONE_OOM_LOCKED);
-	spin_unlock(&zone_scan_lock);
-}
-
-=======
 /**
  * out_of_memory - kill the "best" process when we run out of memory
  * @zonelist: zonelist pointer
@@ -575,7 +567,6 @@ static void clear_system_oom(void)
  * OR try to be smart about which process to kill. Note that we
  * don't have to be perfect here, we just have to be good.
  */
->>>>>>> cdc8780... mm, oom: cleanup pagefault oom handler
 void out_of_memory(struct zonelist *zonelist, gfp_t gfp_mask,
 		int order, nodemask_t *nodemask, bool force_kill)
 {
@@ -637,14 +628,11 @@ out:
 		schedule_timeout_killable(1);
 }
 
-<<<<<<< HEAD
-=======
 /*
  * The pagefault handler calls here because it is out of memory, so kill a
  * memory-hogging task.  If any populated zone has ZONE_OOM_LOCKED set, a
  * parallel oom killing is already in progress so do nothing.
  */
->>>>>>> cdc8780... mm, oom: cleanup pagefault oom handler
 void pagefault_out_of_memory(void)
 {
 	struct zonelist *zonelist = node_zonelist(first_online_node,
