@@ -898,7 +898,7 @@
                 interrupts = <0 98 0>;
                 interrupt-names = "qup_err_intr";
                 qcom,i2c-bus-freq = <384000>;
-                qcom,i2c-src-freq = <19200000>;
+                qcom,i2c-src-freq = <50000000>;
 		qcom,scl-gpio = <&msmgpio 22 0>;
 		qcom,sda-gpio = <&msmgpio 21 0>;
 		qcom,master-id = <86>;
@@ -914,7 +914,7 @@
                 interrupts = <0 100 0>;
                 interrupt-names = "qup_err_intr";
                 qcom,i2c-bus-freq = <384000>;
-                qcom,i2c-src-freq = <19200000>;
+                qcom,i2c-src-freq = <50000000>;
                 qcom,scl-gpio = <&msmgpio 30 0>;
                 qcom,sda-gpio = <&msmgpio 29 0>;
 		qcom,master-id = <86>;
@@ -2177,12 +2177,11 @@
         qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <1>;
 		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <0>;
                 qcom,msm-bus,name = "qcedev-noc";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
@@ -2191,39 +2190,21 @@
 				<56 512 3936000 393600>;
 	};
 
-        qcom,qcrypto@fd440000 {
+        qcom,qcrypto@fd444000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <0>;
-                qcom,msm-bus,name = "qcrypto-noc";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-				<56 512 0 0>,
-				<56 512 3936000 393600>;
-	};
-
-        qcom,qcrypto1@fd440000 {
-		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 236 0>;
-		qcom,bam-pipe-pair = <0>;
-		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <1>;
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
-		qcom,use-sw-aes-cbc-ecb-ctr-algo;
-		qcom,use-sw-aes-xts-algo;
-		qcom,use-sw-ahash-algo;
+                qcom,use-sw-aes-cbc-ecb-ctr-algo;
+                qcom,use-sw-aes-xts-algo;
+                qcom,use-sw-ahash-algo;
 		qcom,msm-bus,vectors-KBps =
 				<56 512 0 0>,
 				<56 512 3936000 393600>;
