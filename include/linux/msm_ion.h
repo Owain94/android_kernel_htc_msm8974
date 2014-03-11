@@ -176,24 +176,31 @@ int ion_handle_get_size(struct ion_client *client, struct ion_handle *handle,
 void ion_unmap_iommu(struct ion_client *client, struct ion_handle *handle,
 			int domain_num, int partition_num);
 
-
-int ion_secure_heap(struct ion_device *dev, int heap_id, int version,
-			void *data);
-
-int ion_unsecure_heap(struct ion_device *dev, int heap_id, int version,
-			void *data);
-
+/**
+ * msm_ion_do_cache_op - do cache operations.
+ *
+ * @client - pointer to ION client.
+ * @handle - pointer to buffer handle.
+ * @vaddr -  virtual address to operate on.
+ * @len - Length of data to do cache operation on.
+ * @cmd - Cache operation to perform:
+ *		ION_IOC_CLEAN_CACHES
+ *		ION_IOC_INV_CACHES
+ *		ION_IOC_CLEAN_INV_CACHES
+ *
+ * Returns 0 on success
+ */
 int msm_ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
 			void *vaddr, unsigned long len, unsigned int cmd);
 
-int msm_ion_secure_heap(int heap_id);
-
-int msm_ion_unsecure_heap(int heap_id);
-
-int msm_ion_secure_heap_2_0(int heap_id, enum cp_mem_usage usage);
-
-int msm_ion_unsecure_heap_2_0(int heap_id, enum cp_mem_usage usage);
-
+/**
+ * msm_ion_secure_buffer - secure an individual buffer
+ *
+ * @client - client who has access to the buffer
+ * @handle - buffer to secure
+ * @usage - usage hint to TZ
+ * @flags - flags for the securing
+ */
 int msm_ion_secure_buffer(struct ion_client *client, struct ion_handle *handle,
 				enum cp_mem_usage usage, int flags);
 
@@ -232,48 +239,9 @@ static inline void ion_unmap_iommu(struct ion_client *client,
 	return;
 }
 
-static inline int ion_secure_heap(struct ion_device *dev, int heap_id,
-					int version, void *data)
-{
-	return -ENODEV;
-
-}
-
-static inline int ion_unsecure_heap(struct ion_device *dev, int heap_id,
-					int version, void *data)
-{
-	return -ENODEV;
-}
-
-static inline void ion_mark_dangling_buffers_locked(struct ion_device *dev)
-{
-}
-
 static inline int msm_ion_do_cache_op(struct ion_client *client,
 			struct ion_handle *handle, void *vaddr,
 			unsigned long len, unsigned int cmd)
-{
-	return -ENODEV;
-}
-
-static inline int msm_ion_secure_heap(int heap_id)
-{
-	return -ENODEV;
-
-}
-
-static inline int msm_ion_unsecure_heap(int heap_id)
-{
-	return -ENODEV;
-}
-
-static inline int msm_ion_secure_heap_2_0(int heap_id, enum cp_mem_usage usage)
-{
-	return -ENODEV;
-}
-
-static inline int msm_ion_unsecure_heap_2_0(int heap_id,
-					enum cp_mem_usage usage)
 {
 	return -ENODEV;
 }
@@ -301,7 +269,7 @@ static inline uintptr_t msm_ion_heap_meminfo(const bool is_total)
 #endif
 
 struct ion_flush_data {
-	struct ion_handle *handle;
+	ion_user_handle_t handle;
 	int fd;
 	void *vaddr;
 	unsigned int offset;
