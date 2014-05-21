@@ -61,6 +61,8 @@ static bool first_call = true;
 static u64 total_time;
 static u64 last_time;
 
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+
 DEFINE_MUTEX(load_stats_work_lock);
 
 struct cpu_load_data {
@@ -169,12 +171,12 @@ static unsigned int report_load(void)
 {
 	int cpu;
 	unsigned int cur_load = 0;
-	
+
 	for_each_online_cpu(cpu) {
 		cur_load += calc_cur_load(cpu);
 	}
 	cur_load /= num_online_cpus();
-  	
+
 	return cur_load;
 }
 
@@ -185,7 +187,7 @@ static unsigned int get_lightest_loaded_cpu_n(void)
 	int i;
 
 	for_each_online_cpu(i) {
-		unsigned int nr_runnables = get_avg_nr_running(i);
+		unsigned int nr_runnables = avg_cpu_nr_running(i);
 
 		if (i > 0 && min_avg_runnables > nr_runnables) {
 			cpu = i;
@@ -205,7 +207,7 @@ static void update_load_stats_state(void)
 	u64 current_time;
 	u64 this_time = 0;
 	int index;
-		
+
 	if (load_stats_state == DISABLED)
 		return;
 
@@ -258,7 +260,7 @@ static void update_load_stats_state(void)
 			hotplug_info("IDLE because of input boost\n");
 		}
 	}
-	
+
 	if (load_stats_state != IDLE)
 		total_time = 0;
 
@@ -335,9 +337,9 @@ static int load_stats_boost_task(void *data) {
 			continue;
 
 		mutex_lock(&load_stats_work_lock);
-		
+
 		input_boost_running = true;
-			
+
 		/* do boost work */
 		nr_cpu_online = num_online_cpus();
 		if (nr_cpu_online < input_boost_cpus){
@@ -348,7 +350,7 @@ static int load_stats_boost_task(void *data) {
 			}
 		}
 		input_boost_end_time = ktime_to_ms(ktime_get()) + input_boost_duration;
-			
+
 		mutex_unlock(&load_stats_work_lock);
 	}
 
@@ -360,8 +362,8 @@ static int load_stats_boost_task(void *data) {
 static ssize_t show_twts_threshold(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
-	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", twts_threshold[0], twts_threshold[1], twts_threshold[2], twts_threshold[3], 
+
+	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", twts_threshold[0], twts_threshold[1], twts_threshold[2], twts_threshold[3],
 	    twts_threshold[4], twts_threshold[5], twts_threshold[6], twts_threshold[7]);
 
 	return out - buf;
@@ -386,15 +388,15 @@ static ssize_t store_twts_threshold(struct cpuquiet_attribute *cattr,
 
 	for (i = 0; i < 8; i++)
 		twts_threshold[i]=user_twts_threshold[i];
-            
+
 	return count;
 }
 
 static ssize_t show_load_threshold(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
-	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", load_threshold[0], load_threshold[1], load_threshold[2], load_threshold[3], 
+
+	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", load_threshold[0], load_threshold[1], load_threshold[2], load_threshold[3],
 	    load_threshold[4], load_threshold[5], load_threshold[6], load_threshold[7]);
 
 	return out - buf;
@@ -419,14 +421,14 @@ static ssize_t store_load_threshold(struct cpuquiet_attribute *cattr,
 
 	for (i = 0; i < 8; i++)
 		load_threshold[i]=user_load_threshold[i];
-            
+
 	return count;
 }
 
 static ssize_t show_log_hotplugging(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
+
 	out += sprintf(out, "%d\n", log_hotplugging);
 
 	return out - buf;
@@ -437,13 +439,13 @@ static ssize_t store_log_hotplugging(struct cpuquiet_attribute *cattr,
 {
 	int ret;
 	unsigned int n;
-		
+
 	ret = sscanf(buf, "%d", &n);
 
 	if ((ret != 1) || n < 0 || n > 1)
 		return -EINVAL;
 
-	log_hotplugging = n;	
+	log_hotplugging = n;
 	return count;
 }
 
@@ -514,11 +516,11 @@ static void load_stats_device_free(void)
 }
 
 static void load_stats_touch_event(void)
-{	
+{
 	if (!cpq_is_suspended() && input_boost_enabled && !input_boost_running){
 		if (input_boost_task_alive)
 			wake_up_process(input_boost_task);
-		
+
 	}
 }
 
@@ -526,7 +528,7 @@ static void load_stats_stop(void)
 {
 	load_stats_state = DISABLED;
 	cancel_delayed_work_sync(&load_stats_work);
-	
+
 	if (input_boost_task_alive)
 		kthread_stop(input_boost_task);
 
@@ -538,7 +540,7 @@ static int load_stats_start(void)
 {
 	int err;
 	struct sched_param param = { .sched_priority = 1 };
-	
+
 	err = load_stats_sysfs();
 	if (err)
 		return err;
@@ -566,7 +568,7 @@ static int load_stats_start(void)
 
 	first_call = true;
 	total_time = 0;
-	last_time = 0;	
+	last_time = 0;
 	load_stats_state = IDLE;
 	load_stats_work_func(NULL);
 
