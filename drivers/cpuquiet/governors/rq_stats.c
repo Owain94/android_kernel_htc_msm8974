@@ -61,11 +61,13 @@ static u64 total_time;
 static u64 last_time;
 DEFINE_MUTEX(rq_stats_work_lock);
 
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+
 static bool log_hotplugging = false;
 #define hotplug_info(msg...) do { \
 	if (log_hotplugging) pr_info("[RQ_STATS]: " msg); \
 	} while (0)
-	
+
 static unsigned int get_lightest_loaded_cpu_n(void)
 {
 	unsigned long min_avg_runnables = ULONG_MAX;
@@ -73,7 +75,7 @@ static unsigned int get_lightest_loaded_cpu_n(void)
 	int i;
 
 	for_each_online_cpu(i) {
-		unsigned int nr_runnables = get_avg_nr_running(i);
+		unsigned int nr_runnables = avg_cpu_nr_running(i);
 
 		if (i > 0 && min_avg_runnables > nr_runnables) {
 			cpu = i;
@@ -93,7 +95,7 @@ static void update_rq_stats_state(void)
 	u64 current_time;
 	u64 this_time = 0;
 	int index;
-		
+
 	if (rq_stats_state == DISABLED)
 		return;
 
@@ -223,9 +225,9 @@ static int load_stats_boost_task(void *data) {
 			continue;
 
 		mutex_lock(&rq_stats_work_lock);
-		
+
 		input_boost_running = true;
-			
+
 		/* do boost work */
 		nr_cpu_online = num_online_cpus();
 		if (nr_cpu_online < input_boost_cpus){
@@ -236,7 +238,7 @@ static int load_stats_boost_task(void *data) {
 			}
 		}
 		input_boost_end_time = ktime_to_ms(ktime_get()) + input_boost_duration;
-			
+
 		mutex_unlock(&rq_stats_work_lock);
 	}
 
@@ -248,8 +250,8 @@ static int load_stats_boost_task(void *data) {
 static ssize_t show_twts_threshold(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
-	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", twts_threshold[0], twts_threshold[1], twts_threshold[2], twts_threshold[3], 
+
+	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", twts_threshold[0], twts_threshold[1], twts_threshold[2], twts_threshold[3],
 	    twts_threshold[4], twts_threshold[5], twts_threshold[6], twts_threshold[7]);
 
 	return out - buf;
@@ -274,15 +276,15 @@ static ssize_t store_twts_threshold(struct cpuquiet_attribute *cattr,
 
 	for (i = 0; i < 8; i++)
 		twts_threshold[i]=user_twts_threshold[i];
-            
+
 	return count;
 }
 
 static ssize_t show_nwns_threshold(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
-	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", nwns_threshold[0], nwns_threshold[1], nwns_threshold[2], nwns_threshold[3], 
+
+	out += sprintf(out, "%u %u %u %u %u %u %u %u\n", nwns_threshold[0], nwns_threshold[1], nwns_threshold[2], nwns_threshold[3],
 	    nwns_threshold[4], nwns_threshold[5], nwns_threshold[6], nwns_threshold[7]);
 
 	return out - buf;
@@ -307,14 +309,14 @@ static ssize_t store_nwns_threshold(struct cpuquiet_attribute *cattr,
 
 	for (i = 0; i < 8; i++)
 		nwns_threshold[i]=user_nwns_threshold[i];
-            
+
 	return count;
 }
 
 static ssize_t show_log_hotplugging(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-		
+
 	out += sprintf(out, "%d\n", log_hotplugging);
 
 	return out - buf;
@@ -325,13 +327,13 @@ static ssize_t store_log_hotplugging(struct cpuquiet_attribute *cattr,
 {
 	int ret;
 	unsigned int n;
-		
+
 	ret = sscanf(buf, "%d", &n);
 
 	if ((ret != 1) || n < 0 || n > 1)
 		return -EINVAL;
 
-	log_hotplugging = n;	
+	log_hotplugging = n;
 	return count;
 }
 
@@ -406,7 +408,7 @@ static void load_stats_touch_event(void)
 	if (!cpq_is_suspended() && input_boost_enabled && !input_boost_running){
 		if (input_boost_task_alive)
 			wake_up_process(input_boost_task);
-		
+
 	}
 }
 
@@ -414,7 +416,7 @@ static void rq_stats_stop(void)
 {
 	rq_stats_state = DISABLED;
 	cancel_delayed_work_sync(&rq_stats_work);
-	
+
 	if (input_boost_task_alive)
 		kthread_stop(input_boost_task);
 
@@ -454,7 +456,7 @@ static int rq_stats_start(void)
 
 	first_call = true;
 	total_time = 0;
-	last_time = 0;	
+	last_time = 0;
 	rq_stats_state = IDLE;
 	rq_stats_work_func(NULL);
 

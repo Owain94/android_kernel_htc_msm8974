@@ -42,6 +42,9 @@ static struct kobject *runnables_kobject;
 /* configurable parameters */
 static unsigned int sample_rate = 20;		/* msec */
 
+extern unsigned long avg_nr_running(void);
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+
 static RUNNABLES_STATE runnables_state;
 static struct workqueue_struct *runnables_wq;
 
@@ -93,7 +96,7 @@ static unsigned int get_lightest_loaded_cpu_n(void)
 	int i;
 
 	for_each_online_cpu(i) {
-		unsigned int nr_runnables = get_avg_nr_running(i);
+		unsigned int nr_runnables = avg_cpu_nr_running(i);
 
 		if (i > 0 && min_avg_runnables > nr_runnables) {
 			cpu = i;
@@ -152,7 +155,7 @@ static void runnables_work_func(struct work_struct *work)
 static ssize_t show_nr_run_thresholds(struct cpuquiet_attribute *cattr, char *buf)
 {
 	char *out = buf;
-	
+
 	out += sprintf(out, "%d %d %d %d\n", nr_run_thresholds[0], nr_run_thresholds[1], nr_run_thresholds[2], nr_run_thresholds[3]);
 
 	return out - buf;
@@ -163,7 +166,7 @@ static ssize_t store_nr_run_thresholds(struct cpuquiet_attribute *cattr,
 {
 	int ret;
 	int user_nr_run_thresholds[] = { 9, 17, 25, UINT_MAX };
-	
+
 	ret = sscanf(buf, "%d %d %d %d", &user_nr_run_thresholds[0], &user_nr_run_thresholds[1], &user_nr_run_thresholds[2], &user_nr_run_thresholds[3]);
 
 	if (ret != 4)
@@ -173,7 +176,7 @@ static ssize_t store_nr_run_thresholds(struct cpuquiet_attribute *cattr,
 	nr_run_thresholds[1] = user_nr_run_thresholds[1];
 	nr_run_thresholds[2] = user_nr_run_thresholds[2];
 	nr_run_thresholds[3] = user_nr_run_thresholds[3];
-	
+
 	return count;
 }
 
