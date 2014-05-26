@@ -28,92 +28,97 @@
 #include "avc.h"
 
 struct task_security_struct {
-	u32 osid;		
-	u32 sid;		
-	u32 exec_sid;		
-	u32 create_sid;		
-	u32 keycreate_sid;	
-	u32 sockcreate_sid;	
+	u32 osid;
+	u32 sid;
+	u32 exec_sid;
+	u32 create_sid;
+	u32 keycreate_sid;
+	u32 sockcreate_sid;
 };
 
 struct inode_security_struct {
-	struct inode *inode;	
-	struct list_head list;	
-	u32 task_sid;		
-	u32 sid;		
-	u16 sclass;		
-	unsigned char initialized;	
+
+	struct inode *inode;	/* back pointer to inode object */
+	union {
+		struct list_head list;	/* list of inode_security_struct */
+		struct rcu_head rcu;	/* for freeing the inode_security_struct */
+	};
+	u32 task_sid;		/* SID of creating task */
+	u32 sid;		/* SID of this object */
+	u16 sclass;		/* security class of this object */
+	unsigned char initialized;	/* initialization flag */
+	u32 tag;		/* Per-File-Encryption tag */
 	struct mutex lock;
 };
 
 struct file_security_struct {
-	u32 sid;		
-	u32 fown_sid;		
-	u32 isid;		
-	u32 pseqno;		
+	u32 sid;
+	u32 fown_sid;
+	u32 isid;
+	u32 pseqno;
 };
 
 struct superblock_security_struct {
-	struct super_block *sb;		
-	u32 sid;			
-	u32 def_sid;			
-	u32 mntpoint_sid;		
-	unsigned int behavior;		
-	unsigned char flags;		
+	struct super_block *sb;
+	u32 sid;
+	u32 def_sid;
+	u32 mntpoint_sid;
+	unsigned int behavior;
+	unsigned char flags;
 	struct mutex lock;
 	struct list_head isec_head;
 	spinlock_t isec_lock;
 };
 
 struct msg_security_struct {
-	u32 sid;	
+	u32 sid;
 };
 
 struct ipc_security_struct {
-	u16 sclass;	
-	u32 sid;	
+	u16 sclass;
+	u32 sid;
 };
 
 struct netif_security_struct {
-	int ifindex;			
-	u32 sid;			
+	int ifindex;
+	u32 sid;
 };
 
 struct netnode_security_struct {
 	union {
-		__be32 ipv4;		
-		struct in6_addr ipv6;	
+		__be32 ipv4;
+		struct in6_addr ipv6;
 	} addr;
-	u32 sid;			
-	u16 family;			
+	u32 sid;
+	u16 family;
 };
 
 struct netport_security_struct {
-	u32 sid;			
-	u16 port;			
-	u8 protocol;			
+	u32 sid;
+	u16 port;
+	u8 protocol;
 };
 
 struct sk_security_struct {
 #ifdef CONFIG_NETLABEL
-	enum {				
+	enum {
 		NLBL_UNSET = 0,
 		NLBL_REQUIRE,
 		NLBL_LABELED,
 		NLBL_REQSKB,
 		NLBL_CONNLABELED,
 	} nlbl_state;
-	struct netlbl_lsm_secattr *nlbl_secattr; 
+	struct netlbl_lsm_secattr *nlbl_secattr;
 #endif
-	u32 sid;			
-	u32 peer_sid;			
-	u16 sclass;			
+	u32 sid;
+	u32 peer_sid;
+	u16 sclass;
 };
 
 struct key_security_struct {
-	u32 sid;	
+	u32 sid;
 };
 
 extern unsigned int selinux_checkreqprot;
 
-#endif 
+#endif
