@@ -14,8 +14,8 @@
 #include <linux/atomic.h>
 #include <linux/export.h>
 #include <linux/kernel.h>
-#include <linux/memory_alloc.h>
 #include <linux/module.h>
+#include <linux/dma-mapping.h>
 #include <linux/mod_devicetable.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
@@ -23,9 +23,9 @@
 #include <linux/string.h>
 #include <linux/atomic.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <asm/io.h>
 #include <asm-generic/sizes.h>
-#include <mach/memory.h>
 #include <mach/msm_rtb.h>
 #include <mach/system.h>
 
@@ -63,7 +63,7 @@ static atomic_t msm_rtb_idx;
 
 struct msm_rtb_state msm_rtb = {
 #if defined(CONFIG_HTC_DEBUG_RTB)
-	
+
 	.filter = (1 << LOGK_READL)|(1 << LOGK_WRITEL)|(1 << LOGK_LOGBUF)
 		|(1 << LOGK_HOTPLUG)|(1 << LOGK_CTXID)|(1 << LOGK_IRQ)|(1 << LOGK_DIE)|(1 << LOGK_DEBUG_SCM),
 #else
@@ -77,7 +77,7 @@ module_param_named(enable, msm_rtb.enabled, int, 0644);
 
 #if defined(CONFIG_HTC_DEBUG_RTB)
 
-#define HTC_DEBUG_RTB_MAGIC 0x5254424D 
+#define HTC_DEBUG_RTB_MAGIC 0x5254424D
 
 struct htc_debug_rtb {
 	unsigned int magic;
@@ -136,7 +136,7 @@ void msm_rtb_disable(void)
 }
 EXPORT_SYMBOL(msm_rtb_disable);
 
-#endif 
+#endif
 
 static int msm_rtb_panic_notifier(struct notifier_block *this,
 					unsigned long event, void *ptr)
@@ -227,7 +227,7 @@ static int msm_rtb_get_idx(void)
 	i = atomic_add_return(msm_rtb.step_size, index);
 	i -= msm_rtb.step_size;
 
-	
+
 	offset = (i & (msm_rtb.nentries - 1)) -
 		 ((i - msm_rtb.step_size) & (msm_rtb.nentries - 1));
 	if (offset < 0) {
@@ -246,7 +246,7 @@ static int msm_rtb_get_idx(void)
 	i = atomic_inc_return(&msm_rtb_idx);
 	i--;
 
-	
+
 	offset = (i & (msm_rtb.nentries - 1)) -
 		 ((i - 1) & (msm_rtb.nentries - 1));
 	if (offset < 0) {
@@ -296,50 +296,46 @@ int msm_rtb_probe(struct platform_device *pdev)
 		}
 		msm_rtb.size = d->size;
 	} else {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
-					"msm_rtb_res");
-		if (res) {
-			msm_rtb.size = resource_size(res);
+		u64 size;
+		struct device_node *pnode;
+
+		pnode = of_parse_phandle(pdev->dev.of_node,
+						"linux,contiguous-region", 0);
+		if (pnode != NULL) {
+			const u32 *addr;
+
+			addr = of_get_address(pnode, 0, &size, NULL);
+			if (!addr) {
+				of_node_put(pnode);
+				return -EINVAL;
+			}
+			of_node_put(pnode);
 		} else {
-			int size;
-
-			ret = of_property_read_u32((&pdev->dev)->of_node,
-						"qcom,memory-reservation-size",
-						&size);
-
+			ret = of_property_read_u32(pdev->dev.of_node,
+					"qcom,rtb-size",
+					(u32 *)&size);
 			if (ret < 0)
 				return ret;
 
-			msm_rtb.size = size;
 		}
+
+		msm_rtb.size = size;
 	}
 	pr_info("msm_rtb.size: 0x%x\n", msm_rtb.size);
 
 	if (msm_rtb.size <= 0 || msm_rtb.size > SZ_1M)
 		return -EINVAL;
 
-	if (res) {
-		msm_rtb.phys = res->start;
-	} else {
-		msm_rtb.phys = allocate_contiguous_ebi_nomap(msm_rtb.size, SZ_4K);
-	}
-	pr_info("msm_rtb.phys: 0x%x\n", msm_rtb.phys);
+	msm_rtb.rtb = dma_alloc_coherent(&pdev->dev, msm_rtb.size,
+						&msm_rtb.phys,
+						GFP_KERNEL);
 
-	if (!msm_rtb.phys)
+	if (!msm_rtb.rtb)
 		return -ENOMEM;
-
-	msm_rtb.rtb = ioremap(msm_rtb.phys, msm_rtb.size);
-
-	if (!msm_rtb.rtb) {
-		if (!res) {
-			free_contiguous_memory_by_paddr(msm_rtb.phys);
-		}
-		return -ENOMEM;
-	}
 
 	msm_rtb.nentries = msm_rtb.size / sizeof(struct msm_rtb_layout);
 
-	
+
 	msm_rtb.nentries = __rounddown_pow_of_two(msm_rtb.nentries);
 
 	memset(msm_rtb.rtb, 0, msm_rtb.size);

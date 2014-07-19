@@ -6,7 +6,6 @@
 enum msm_ion_heap_types {
 	ION_HEAP_TYPE_MSM_START = ION_HEAP_TYPE_CUSTOM + 1,
 	ION_HEAP_TYPE_DMA = ION_HEAP_TYPE_MSM_START,
-	ION_HEAP_TYPE_CP,
 	ION_HEAP_TYPE_SECURE_DMA,
 	ION_HEAP_TYPE_REMOVED,
 };
@@ -16,21 +15,21 @@ enum ion_heap_ids {
 	INVALID_HEAP_ID = -1,
 	ION_CP_MM_HEAP_ID = 8,
 	ION_CP_MFC_HEAP_ID = 12,
-	ION_FBMEM_HEAP_ID = 13, 
-	ION_CP_WB_HEAP_ID = 16, 
-	ION_CAMERA_HEAP_ID = 20, 
+	ION_FBMEM_HEAP_ID = 13,
+	ION_CP_WB_HEAP_ID = 16,
+	ION_CAMERA_HEAP_ID = 20,
 	ION_SYSTEM_CONTIG_HEAP_ID = 21,
 	ION_ADSP_HEAP_ID = 22,
-	ION_PIL1_HEAP_ID = 23, 
+	ION_PIL1_HEAP_ID = 23,
 	ION_SF_HEAP_ID = 24,
 	ION_SYSTEM_HEAP_ID = 25,
-	ION_PIL2_HEAP_ID = 26, 
+	ION_PIL2_HEAP_ID = 26,
 	ION_QSECOM_HEAP_ID = 27,
 	ION_AUDIO_HEAP_ID = 28,
 
 	ION_MM_FIRMWARE_HEAP_ID = 29,
 
-	ION_HEAP_ID_RESERVED = 31 
+	ION_HEAP_ID_RESERVED = 31
 };
 
 #define ION_IOMMU_HEAP_ID ION_SYSTEM_HEAP_ID
@@ -51,7 +50,6 @@ enum cp_mem_usage {
 	UNKNOWN = 0x7FFFFFFF,
 };
 
-#define ION_HEAP_CP_MASK		(1 << ION_HEAP_TYPE_CP)
 #define ION_HEAP_TYPE_DMA_MASK         (1 << ION_HEAP_TYPE_DMA)
 
 #define ION_FLAG_SECURE (1 << ION_HEAP_ID_RESERVED)
@@ -89,15 +87,49 @@ enum cp_mem_usage {
 
 #ifdef __KERNEL__
 
+enum ion_permission_type {
+	IPT_TYPE_MM_CARVEOUT = 0,
+	IPT_TYPE_MFC_SHAREDMEM = 1,
+	IPT_TYPE_MDP_WRITEBACK = 2,
+};
+
+/*
+ * This flag allows clients when mapping into the IOMMU to specify to
+ * defer un-mapping from the IOMMU until the buffer memory is freed.
+ */
 #define ION_IOMMU_UNMAP_DELAYED 1
 
 #define ION_UNSECURE_DELAYED	1
 
+/**
+ * struct ion_cp_heap_pdata - defines a content protection heap in the given
+ * platform
+ * @permission_type:	Memory ID used to identify the memory to TZ
+ * @align:		Alignment requirement for the memory
+ * @secure_base:	Base address for securing the heap.
+ *			Note: This might be different from actual base address
+ *			of this heap in the case of a shared heap.
+ * @secure_size:	Memory size for securing the heap.
+ *			Note: This might be different from actual size
+ *			of this heap in the case of a shared heap.
+ * @fixed_position	If nonzero, position in the fixed area.
+ * @iommu_map_all:	Indicates whether we should map whole heap into IOMMU.
+ * @iommu_2x_map_domain: Indicates the domain to use for overmapping.
+ * @request_region:	function to be called when the number of allocations
+ *			goes from 0 -> 1
+ * @release_region:	function to be called when the number of allocations
+ *			goes from 1 -> 0
+ * @setup_region:	function to be called upon ion registration
+ * @allow_nonsecure_alloc: allow non-secure allocations from this heap. For
+ *			secure heaps, this flag must be set so allow non-secure
+ *			allocations. For non-secure heaps, this flag is ignored.
+ *
+ */
 struct ion_cp_heap_pdata {
 	enum ion_permission_type permission_type;
 	unsigned int align;
-	ion_phys_addr_t secure_base; 
-	size_t secure_size; 
+	ion_phys_addr_t secure_base;
+	size_t secure_size;
 	int is_cma;
 	enum ion_fixed_position fixed_position;
 	int iommu_map_all;
@@ -105,7 +137,6 @@ struct ion_cp_heap_pdata {
 	int (*request_region)(void *);
 	int (*release_region)(void *);
 	void *(*setup_region)(void);
-	enum ion_memory_types memory_type;
 	int allow_nonsecure_alloc;
 };
 
@@ -116,7 +147,6 @@ struct ion_co_heap_pdata {
 	int (*request_region)(void *);
 	int (*release_region)(void *);
 	void *(*setup_region)(void);
-	enum ion_memory_types memory_type;
 };
 
 struct ion_cma_pdata {
@@ -266,9 +296,9 @@ static inline uintptr_t msm_ion_heap_meminfo(const bool is_total)
 {
 	return 0;
 }
-#endif 
+#endif
 
-#endif 
+#endif
 
 struct ion_flush_data {
 	struct ion_handle *handle;

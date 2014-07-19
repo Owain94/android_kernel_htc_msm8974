@@ -29,7 +29,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM_CONTIG,
 	ION_HEAP_TYPE_CARVEOUT,
 	ION_HEAP_TYPE_CHUNK,
-	ION_HEAP_TYPE_CUSTOM, 
+	ION_HEAP_TYPE_CUSTOM,
 	ION_NUM_HEAPS,
 };
 
@@ -39,13 +39,13 @@ enum ion_heap_type {
 
 #define ION_NUM_HEAP_IDS		sizeof(unsigned int) * 8
 
-#define ION_FLAG_CACHED 1		
-#define ION_FLAG_CACHED_NEEDS_SYNC 2	
-#define ION_FLAG_FREED_FROM_SHRINKER 4	
+#define ION_FLAG_CACHED 1
+#define ION_FLAG_CACHED_NEEDS_SYNC 2
+#define ION_FLAG_FREED_FROM_SHRINKER 4
 
 #ifdef __KERNEL__
 #include <linux/err.h>
-#include <mach/ion.h>
+
 struct ion_device;
 struct ion_heap;
 struct ion_mapper;
@@ -54,13 +54,29 @@ struct ion_buffer;
 
 #define ion_phys_addr_t unsigned long
 
+/**
+ * struct ion_platform_heap - defines a heap in the given platform
+ * @type:	type of the heap from ion_heap_type enum
+ * @id:		unique identifier for heap.  When allocating higher numbers
+ * 		will be allocated from first.  At allocation these are passed
+ *		as a bit mask and therefore can not exceed ION_NUM_HEAP_IDS.
+ * @name:	used for debug purposes
+ * @base:	base address of heap in physical memory if applicable
+ * @size:	size of the heap in bytes if applicable
+ * @has_outer_cache:    set to 1 if outer cache is used, 0 otherwise.
+ * @extra_data:	Extra data specific to each heap type
+ * @priv:	heap private data
+ * @align:	required alignment in physical memory if applicable
+ * @priv:	private info passed from the board file
+ *
+ * Provided by the board file.
+ */
 struct ion_platform_heap {
 	enum ion_heap_type type;
 	unsigned int id;
 	const char *name;
 	ion_phys_addr_t base;
 	size_t size;
-	enum ion_memory_types memory_type;
 	unsigned int has_outer_cache;
 	void *extra_data;
 	ion_phys_addr_t align;
@@ -170,8 +186,8 @@ static inline int ion_handle_get_flags(struct ion_client *client,
 	return -ENODEV;
 }
 
-#endif 
-#endif 
+#endif
+#endif
 
 
 struct ion_allocation_data {
@@ -213,4 +229,4 @@ struct ion_custom_data {
 #define ION_IOC_CUSTOM		_IOWR(ION_IOC_MAGIC, 6, struct ion_custom_data)
 
 
-#endif 
+#endif

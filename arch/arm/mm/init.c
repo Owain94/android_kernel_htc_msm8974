@@ -86,7 +86,7 @@ void __init early_init_dt_setup_initrd_arch(unsigned long start, unsigned long e
 	phys_initrd_start = start;
 	phys_initrd_size = end - start;
 }
-#endif 
+#endif
 
 struct meminfo meminfo;
 
@@ -147,7 +147,7 @@ static void __init find_limits(unsigned long *min, unsigned long *max_low,
 	struct meminfo *mi = &meminfo;
 	int i;
 
-	
+
 	*min = bank_pfn_start(&mi->bank[0]);
 	for_each_bank (i, mi)
 		if (mi->bank[i].highmem)
@@ -172,7 +172,7 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 	pgdat = NODE_DATA(0);
 	init_bootmem_node(pgdat, __phys_to_pfn(bitmap), start_pfn, end_pfn);
 
-	
+
 	for_each_memblock(memory, reg) {
 		unsigned long start = memblock_region_memory_base_pfn(reg);
 		unsigned long end = memblock_region_memory_end_pfn(reg);
@@ -185,7 +185,7 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 		free_bootmem(__pfn_to_phys(start), (end - start) << PAGE_SHIFT);
 	}
 
-	
+
 	for_each_memblock(reserved, reg) {
 		unsigned long start = memblock_region_reserved_base_pfn(reg);
 		unsigned long end = memblock_region_reserved_end_pfn(reg);
@@ -340,81 +340,6 @@ static int __init meminfo_cmp(const void *_a, const void *_b)
 	return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
 }
 
-phys_addr_t memory_hole_offset;
-EXPORT_SYMBOL(memory_hole_offset);
-phys_addr_t memory_hole_start;
-EXPORT_SYMBOL(memory_hole_start);
-phys_addr_t memory_hole_end;
-EXPORT_SYMBOL(memory_hole_end);
-unsigned long memory_hole_align;
-EXPORT_SYMBOL(memory_hole_align);
-unsigned long virtual_hole_start;
-unsigned long virtual_hole_end;
-
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-void find_memory_hole(void)
-{
-	int i;
-	phys_addr_t hole_start;
-	phys_addr_t hole_size;
-	unsigned long hole_end_virt;
-
-	for (i = 0; i < (meminfo.nr_banks - 1); i++) {
-		if ((meminfo.bank[i].start + meminfo.bank[i].size) !=
-						meminfo.bank[i+1].start) {
-			if (meminfo.bank[i].start + meminfo.bank[i].size
-							<= MAX_HOLE_ADDRESS) {
-
-				hole_start = meminfo.bank[i].start +
-							meminfo.bank[i].size;
-				hole_size = meminfo.bank[i+1].start -
-								hole_start;
-
-				if (memory_hole_start == 0 &&
-							memory_hole_end == 0) {
-					memory_hole_start = hole_start;
-					memory_hole_end = hole_start +
-								hole_size;
-				} else if ((memory_hole_end -
-					memory_hole_start) <= hole_size) {
-					memory_hole_start = hole_start;
-					memory_hole_end = hole_start +
-								hole_size;
-				}
-			}
-		}
-	}
-
-	memory_hole_offset = memory_hole_start - PHYS_OFFSET;
-	if (!IS_ALIGNED(memory_hole_start, SECTION_SIZE)) {
-		pr_err("memory_hole_start %pa is not aligned to %lx\n",
-			&memory_hole_start, SECTION_SIZE);
-		BUG();
-	}
-	if (!IS_ALIGNED(memory_hole_end, SECTION_SIZE)) {
-		pr_err("memory_hole_end %pa is not aligned to %lx\n",
-			&memory_hole_end, SECTION_SIZE);
-		BUG();
-	}
-
-	hole_end_virt = __phys_to_virt(memory_hole_end);
-
-	if ((!IS_ALIGNED(hole_end_virt, PMD_SIZE) &&
-	     IS_ALIGNED(memory_hole_end, PMD_SIZE)) ||
-	     (IS_ALIGNED(hole_end_virt, PMD_SIZE) &&
-	      !IS_ALIGNED(memory_hole_end, PMD_SIZE))) {
-		memory_hole_align = !IS_ALIGNED(hole_end_virt, PMD_SIZE) ?
-					hole_end_virt & ~PMD_MASK :
-					memory_hole_end & ~PMD_MASK;
-		virtual_hole_start = hole_end_virt;
-		virtual_hole_end = hole_end_virt + memory_hole_align;
-		pr_info("Physical memory hole is not aligned. There will be a virtual memory hole from %lx to %lx\n",
-			virtual_hole_start, virtual_hole_end);
-	}
-}
-
-#endif
-
 void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 {
 	int i;
@@ -424,7 +349,7 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 	for (i = 0; i < mi->nr_banks; i++)
 		memblock_add(mi->bank[i].start, mi->bank[i].size);
 
-	
+
 #ifdef CONFIG_XIP_KERNEL
 	memblock_reserve(__pa(_sdata), _end - _sdata);
 #else
@@ -446,7 +371,7 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 	if (phys_initrd_size) {
 		memblock_reserve(phys_initrd_start, phys_initrd_size);
 
-		
+
 		initrd_start = __phys_to_virt(phys_initrd_start);
 		initrd_end = initrd_start + phys_initrd_size;
 	}
@@ -455,7 +380,7 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 	arm_mm_memblock_reserve();
 	arm_dt_memblock_reserve();
 
-	
+
 	if (mdesc->reserve)
 		mdesc->reserve();
 
@@ -590,20 +515,20 @@ static void __init free_highpages(void)
 	unsigned long max_low = max_low_pfn + PHYS_PFN_OFFSET;
 	struct memblock_region *mem, *res;
 
-	
+
 	for_each_memblock(memory, mem) {
 		unsigned long start = memblock_region_memory_base_pfn(mem);
 		unsigned long end = memblock_region_memory_end_pfn(mem);
 
-		
+
 		if (end <= max_low)
 			continue;
 
-		
+
 		if (start < max_low)
 			start = max_low;
 
-		
+
 		for_each_memblock(reserved, res) {
 			unsigned long res_start, res_end;
 
@@ -626,7 +551,7 @@ static void __init free_highpages(void)
 				break;
 		}
 
-		
+
 		if (start < end)
 			totalhigh_pages += free_area(start, end, NULL);
 	}
@@ -680,20 +605,20 @@ void __init mem_init(void)
 	struct memblock_region *reg;
 	int i;
 #ifdef CONFIG_HAVE_TCM
-	
+
 	extern u32 dtcm_end;
 	extern u32 itcm_end;
 #endif
 
 	max_mapnr   = pfn_to_page(max_pfn + PHYS_PFN_OFFSET) - mem_map;
 
-	
+
 	free_unused_memmap(&meminfo);
 
 	totalram_pages += free_all_bootmem();
 
 #ifdef CONFIG_SA1111
-	
+
 	totalram_pages += free_area(PHYS_PFN_OFFSET,
 				    __phys_to_pfn(__pa(swapper_pg_dir)), NULL);
 #endif

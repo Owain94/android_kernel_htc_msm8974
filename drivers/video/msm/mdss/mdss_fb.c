@@ -33,6 +33,8 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/msm_mdp.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/proc_fs.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -43,7 +45,6 @@
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
 #include <linux/file.h>
-#include <linux/memory_alloc.h>
 #include <linux/kthread.h>
 
 #include <mach/board.h>
@@ -486,19 +487,19 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		pr_err("pm_runtime: fail to set active.\n");
 	pm_runtime_enable(mfd->fbi->dev);
 
-	
+
 	if (!lcd_backlight_registered) {
 		if (led_classdev_register(&pdev->dev, &backlight_led))
 			pr_err("led_classdev_register failed\n");
 		else
 			lcd_backlight_registered = 1;
 
-		
+
 		htc_register_attrs(&backlight_led.dev->kobj, mfd);
 		htc_debugfs_init(mfd);
 	}
 
-	
+
 	if (!lcd_backlight_nits_registered) {
 		if (mfd->panel_info->max_brt)
 			backlight_led_nits.max_brightness  = mfd->panel_info->act_max_brt;
@@ -567,7 +568,7 @@ static int mdss_fb_remove(struct platform_device *pdev)
 		pr_err("msm_fb_remove: can't stop the device %d\n",
 			    mfd->index);
 
-	
+
 	unregister_framebuffer(mfd->fbi);
 
 	if (lcd_backlight_registered) {
@@ -648,7 +649,7 @@ static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
 		return ret;
 	}
 
-	
+
 	mfd->op_enable = mfd->suspend.op_enable;
 
 	if (mfd->suspend.panel_power_on) {
@@ -758,7 +759,7 @@ static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 		}
 		temp = (temp * mfd->bl_scale) / 1024;
 
-		
+
 		if (temp < mfd->bl_min_lvl)
 			temp = mfd->bl_min_lvl;
 	}
@@ -777,7 +778,7 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 		pr_info("bl_level_old=%d bkl_lvl=%d\n",mfd->bl_level_old, bkl_lvl);
 		mfd->unset_bl_level = 0;
 		mfd->bl_updated = 1;
-		mfd->bl_level_old  = 0;	
+		mfd->bl_level_old  = 0;
 	} else if (((!mfd->panel_power_on && mfd->dcm_state != DCM_ENTER)
 		|| !mfd->bl_updated) && !IS_CALIB_MODE_BL(mfd)) {
 		mfd->unset_bl_level = bkl_lvl;
@@ -802,7 +803,7 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 		if (mfd->mdp.update_ad_input) {
 			update_ad_input = mfd->mdp.update_ad_input;
 			mutex_unlock(&mfd->bl_lock);
-			
+
 			update_ad_input(mfd);
 			mdss_fb_bl_update_notify(mfd);
 			mutex_lock(&mfd->bl_lock);
@@ -818,7 +819,7 @@ static void mdss_fb_display_on(struct msm_fb_data_type *mfd)
 		if (mfd->mdp.display_on)
 			mfd->mdp.display_on(mfd);
 
-		
+
 		if (!ignore_bkl_zero) {
 			pr_info("%s: bl_level %d ignore_bkl_zero %d\n", __func__, mfd->bl_level, ignore_bkl_zero);
 			if (mfd->bl_level == 0) {
@@ -832,7 +833,7 @@ static void mdss_fb_display_on(struct msm_fb_data_type *mfd)
 		}
 		mfd->request_display_on = false;
 		mfd->bl_updated = 0;
-		
+
 		if (mfd->panel_info->pdest == DISPLAY_1)
 			htc_dimming_on(mfd);
 	}
@@ -916,7 +917,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->op_enable = true;
 			complete(&mfd->power_off_comp);
 
-			
+
 			htc_reset_status();
 		}
 		break;
@@ -944,7 +945,7 @@ static int mdss_fb_blank(int blank_mode, struct fb_info *info)
 
 static int mdss_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-	
+
 	unsigned long start = info->fix.smem_start;
 	u32 len = PAGE_ALIGN((start & ~PAGE_MASK) + info->fix.smem_len);
 	unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
@@ -962,7 +963,7 @@ static int mdss_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 		return ret;
 	}
 
-	
+
 	start &= PAGE_MASK;
 	if ((vma->vm_end <= vma->vm_start) ||
 	    (off >= len) ||
@@ -972,10 +973,10 @@ static int mdss_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	if (off < start)
 		return -EINVAL;
 	vma->vm_pgoff = off >> PAGE_SHIFT;
-	
+
 	vma->vm_flags |= VM_IO | VM_RESERVED;
 
-	
+
 	if (mfd->mdp_fb_page_protection == MDP_FB_PAGE_PROTECTION_WRITECOMBINE)
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	else if (mfd->mdp_fb_page_protection ==
@@ -990,7 +991,7 @@ static int mdss_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	else
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-	
+
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
 			       vma->vm_end - vma->vm_start,
 			       vma->vm_page_prot))
@@ -1003,53 +1004,69 @@ static struct fb_ops mdss_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_open = mdss_fb_open,
 	.fb_release = mdss_fb_release,
-	.fb_check_var = mdss_fb_check_var,	
-	.fb_set_par = mdss_fb_set_par,	
-	.fb_blank = mdss_fb_blank,	
-	.fb_pan_display = mdss_fb_pan_display,	
-	.fb_ioctl = mdss_fb_ioctl,	
+	.fb_check_var = mdss_fb_check_var,
+	.fb_set_par = mdss_fb_set_par,
+	.fb_blank = mdss_fb_blank,
+	.fb_pan_display = mdss_fb_pan_display,
+	.fb_ioctl = mdss_fb_ioctl,
 	.fb_mmap = mdss_fb_mmap,
 };
 
 static int mdss_fb_alloc_fbmem_iommu(struct msm_fb_data_type *mfd, int dom)
 {
 	void *virt = NULL;
-	unsigned long phys = 0;
+	phys_addr_t phys = 0;
 	size_t size = 0;
 	struct platform_device *pdev = mfd->pdev;
+	int rc = 0;
+	struct device_node *fbmem_pnode = NULL;
 
 	if (!pdev || !pdev->dev.of_node) {
 		pr_err("Invalid device node\n");
 		return -ENODEV;
 	}
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				 "qcom,memory-reservation-size",
-				 &size) || !size) {
+	fbmem_pnode = of_parse_phandle(pdev->dev.of_node,
+		"linux,contiguous-region", 0);
+	if (!fbmem_pnode) {
+		pr_debug("fbmem is not reserved for %s\n", pdev->name);
 		mfd->fbi->screen_base = NULL;
 		mfd->fbi->fix.smem_start = 0;
 		mfd->fbi->fix.smem_len = 0;
 		return 0;
+	} else {
+		const u32 *addr;
+		u64 len;
+
+		addr = of_get_address(fbmem_pnode, 0, &len, NULL);
+		if (!addr) {
+			pr_err("fbmem size is not specified\n");
+			of_node_put(fbmem_pnode);
+			return -EINVAL;
+		}
+		size = (size_t)len;
+		of_node_put(fbmem_pnode);
 	}
 
-	pr_info("%s frame buffer reserve_size=0x%x\n", __func__, size);
+	pr_debug("%s frame buffer reserve_size=0x%zx\n", __func__, size);
 
 	if (size < PAGE_ALIGN(mfd->fbi->fix.line_length *
 			      mfd->fbi->var.yres_virtual))
 		pr_warn("reserve size is smaller than framebuffer size\n");
 
-	virt = allocate_contiguous_memory(size, MEMTYPE_EBI1, SZ_1M, 0);
+	virt = dma_alloc_coherent(&pdev->dev, size, &phys, GFP_KERNEL);
 	if (!virt) {
-		pr_err("unable to alloc fbmem size=%u\n", size);
+		pr_err("unable to alloc fbmem size=%zx\n", size);
 		return -ENOMEM;
 	}
 
-	phys = memory_pool_node_paddr(virt);
-
-	msm_iommu_map_contig_buffer(phys, dom, 0, size, SZ_4K, 0,
+	rc = msm_iommu_map_contig_buffer(phys, dom, 0, size, SZ_4K, 0,
 					    &mfd->iova);
-	pr_info("allocating %u bytes at %p (%lx phys) for fb %d\n",
-		 size, virt, phys, mfd->index);
+	if (rc)
+		pr_warn("Cannot map fb_mem %pa to IOMMU. rc=%d\n", &phys, rc);
+
+	pr_debug("alloc 0x%zxB @ (%pa phys) (0x%p virt) (%pa iova) for fb%d\n",
+		 size, &phys, virt, &mfd->iova, mfd->index);
 
 	mfd->fbi->screen_base = virt;
 	mfd->fbi->fix.smem_start = phys;
@@ -1090,23 +1107,23 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	fix = &fbi->fix;
 	var = &fbi->var;
 
-	fix->type_aux = 0;	
-	fix->visual = FB_VISUAL_TRUECOLOR;	
-	fix->ywrapstep = 0;	
-	fix->mmio_start = 0;	
-	fix->mmio_len = 0;	
+	fix->type_aux = 0;
+	fix->visual = FB_VISUAL_TRUECOLOR;
+	fix->ywrapstep = 0;
+	fix->mmio_start = 0;
+	fix->mmio_len = 0;
 	fix->accel = FB_ACCEL_NONE;
 
-	var->xoffset = 0,	
-	var->yoffset = 0,	
-	var->grayscale = 0,	
-	var->nonstd = 0,	
-	var->activate = FB_ACTIVATE_VBL,	
-	var->height = -1,	
-	var->width = -1,	
-	var->accel_flags = 0,	
-	var->sync = 0,	
-	var->rotate = 0,	
+	var->xoffset = 0,
+	var->yoffset = 0,
+	var->grayscale = 0,
+	var->nonstd = 0,
+	var->activate = FB_ACTIVATE_VBL,
+	var->height = -1,
+	var->width = -1,
+	var->accel_flags = 0,
+	var->sync = 0,
+	var->rotate = 0,
 	mfd->op_enable = false;
 
 	switch (mfd->fb_imgType) {
@@ -1192,7 +1209,7 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 		fix->ypanstep = 1;
 		var->vmode = FB_VMODE_NONINTERLACED;
 
-		
+
 		var->blue.offset = 0;
 		var->green.offset = 5;
 		var->red.offset = 11;
@@ -1231,7 +1248,7 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 		var->height = panel_info->physical_height;
 	var->xres_virtual = var->xres;
 	var->yres_virtual = panel_info->yres * mfd->fb_page;
-	var->bits_per_pixel = bpp * 8;	
+	var->bits_per_pixel = bpp * 8;
 	var->upper_margin = panel_info->lcdc.v_back_porch;
 	var->lower_margin = panel_info->lcdc.v_front_porch;
 	var->vsync_len = panel_info->lcdc.v_pulse_width;
@@ -1240,12 +1257,12 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	var->hsync_len = panel_info->lcdc.h_pulse_width;
 	var->pixclock = panel_info->clk_rate / 1000;
 
-	
+
 	if (panel_info->camera_blk || panel_info->camera_dua_blk) {
 		htc_register_camera_bkl(panel_info->camera_blk, panel_info->camera_dua_blk);
 	}
 
-	
+
 
 	id = (int *)&mfd->panel;
 
@@ -1542,7 +1559,7 @@ void mdss_fb_wait_for_fence(struct msm_sync_pt_data *sync_pt_data)
 				fence_cnt * sizeof(struct sync_fence *));
 	mutex_unlock(&sync_pt_data->sync_mutex);
 
-	
+
 	for (i = 0; i < fence_cnt && !ret; i++) {
 		ret = sync_fence_wait(fences[i],
 				WAIT_FENCE_FIRST_TIMEOUT);
@@ -1815,7 +1832,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		wake_up_all(&mfd->kickoff_wait_q);
 	}
 	if (!ret) {
-		
+
 		if (mfd->panel_info->pdest == DISPLAY_1)
 			htc_set_cabc(mfd);
 
@@ -1925,7 +1942,7 @@ static int mdss_fb_check_var(struct fb_var_screeninfo *var,
 		} else
 			return -EINVAL;
 
-		
+
 
 		if ((var->blue.length != 8) ||
 		    (var->green.length != 8) ||
@@ -2068,7 +2085,7 @@ int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state)
 		break;
 	case DCM_EXIT:
 		if (mfd->dcm_state == DCM_ENTER) {
-			
+
 			mfd->panel_power_on = true;
 			mfd->dcm_state = DCM_EXIT;
 			ret = 0;
@@ -2214,7 +2231,7 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		goto buf_sync_err_1;
 	}
 
-	
+
 	rel_fen_fd = get_unused_fd_flags(0);
 	if (rel_fen_fd < 0) {
 		pr_err("%s: get_unused_fd_flags failed\n",
