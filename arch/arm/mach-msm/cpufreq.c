@@ -40,6 +40,8 @@
 #endif
 #include <mach/cpufreq.h>
 
+#include <mach/msm_bus.h>
+
 #include "acpuclock.h"
 
 #ifdef CONFIG_DEBUG_FS
@@ -78,7 +80,7 @@ static struct workqueue_struct *msm_cpufreq_wq;
 
 /* maxscroff */
 uint32_t maxscroff_freq = 1190400;
-uint32_t maxscroff = 1; 
+uint32_t maxscroff = 1;
 
 /* ex max freq */
 uint32_t ex_max_freq;
@@ -94,6 +96,16 @@ unsigned long msm_cpufreq_get_bw(void)
 {
 	return mem_bw[max_freq_index];
 }
+
+struct cpu_freq {
+	uint32_t max;
+	uint32_t min;
+	uint32_t allowed_max;
+	uint32_t allowed_min;
+	uint32_t limits_init;
+};
+
+static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
 static void update_l2_bw(int *also_cpu)
 {
@@ -153,8 +165,10 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	int saved_sched_policy = -EINVAL;
 	int saved_sched_rt_prio = -EINVAL;
 	struct cpufreq_freqs freqs;
+	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
+	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
 		if (new_freq > limit->allowed_max) {
@@ -167,6 +181,12 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			pr_debug("min: limiting freq to %d\n", new_freq);
 		}
 	}
+
+	/* limits applied above must be in cpufreq table */
+	table = cpufreq_frequency_get_table(policy->cpu);
+	if (cpufreq_frequency_table_target(policy, table, new_freq,
+		CPUFREQ_RELATION_H, &index))
+		return -EINVAL;
 
 	if (policy->cpu >= 1 && is_sync)
 		return 0;
@@ -216,7 +236,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 	}
 
-	
+
 	if (freqs.new > freqs.old && saved_sched_policy >= 0) {
 		param.sched_priority = saved_sched_rt_prio;
 		sched_setscheduler_nocheck(current, saved_sched_policy, &param);
@@ -616,7 +636,7 @@ static ssize_t store_max_screen_off(struct cpufreq_policy *policy,
 		const char *buf, size_t count)
 {
 	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
-            if (maxscroff != buf[0] - '0') 
+            if (maxscroff != buf[0] - '0')
 		        maxscroff = buf[0] - '0';
 
 	return count;
@@ -641,7 +661,7 @@ static struct freq_attr *msm_freq_attr[] = {
 };
 
 static struct cpufreq_driver msm_cpufreq_driver = {
-	
+
 	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
@@ -662,7 +682,7 @@ static int cpufreq_parse_dt(struct device *dev)
 	if (l2_clk)
 		num_cols++;
 
-	
+
 	if (!of_find_property(dev->of_node, PROP_TBL, &len))
 		return -EINVAL;
 	len /= sizeof(*data);
@@ -679,7 +699,7 @@ static int cpufreq_parse_dt(struct device *dev)
 	if (ret)
 		return ret;
 
-	
+
 	freq_table = devm_kzalloc(dev, (nf + 1) * sizeof(*freq_table),
 				  GFP_KERNEL);
 	mem_bw = devm_kzalloc(dev, nf * sizeof(*mem_bw), GFP_KERNEL);
