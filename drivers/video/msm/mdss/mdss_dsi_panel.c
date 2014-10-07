@@ -26,11 +26,60 @@
 #include <mach/debug_display.h>
 #include <linux/msm_mdp.h>
 
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+
 #define DT_CMD_HDR 6
 #define WLED_MAX_LEVEL	4095
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 DEFINE_LED_TRIGGER(bl_led_i2c_trigger);
+
+
+/* Backlight dimmer */
+static int backlight_dimmer = 0;
+
+static ssize_t backlight_dimmer_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	count += sprintf(buf, "%d\n", backlight_dimmer);
+	return count;
+}
+
+static ssize_t backlight_dimmer_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	sscanf(buf, "%d ",&backlight_dimmer);
+	if (backlight_dimmer < 0 || backlight_dimmer > 3) {
+		backlight_dimmer = 0;
+	}
+	return count;
+}
+
+static struct kobj_attribute backlight_dimmer_attribute =
+	__ATTR(backlight_dimmer, 0666,
+		backlight_dimmer_show,
+		backlight_dimmer_store);
+
+static struct attribute *backlight_dimmer_attrs[] =
+	{
+		&backlight_dimmer_attribute.attr,
+		NULL,
+	};
+
+static struct attribute_group backlight_dimmer_attr_group =
+	{
+		.attrs = backlight_dimmer_attrs,
+	};
+
+
+static struct kobject *backlight_dimmer_kobj;
+
+/* end Backlight Dimmer */
+
+
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -85,7 +134,7 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	ctrl->pwm_enabled = 1;
 }
 
-static char dcs_cmd[2] = {0x54, 0x00}; 
+static char dcs_cmd[2] = {0x54, 0x00};
 static struct dsi_cmd_desc dcs_read_cmd = {
 	{DTYPE_DCS_READ, 1, 0, 1, 5, sizeof(dcs_cmd)},
 	dcs_cmd
@@ -104,7 +153,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
 	cmdreq.rlen = len;
 	cmdreq.rbuf = rbuf;
-	cmdreq.cb = fxn; 
+	cmdreq.cb = fxn;
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 
 	return 0;
@@ -120,7 +169,7 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.cmds_cnt = pcmds->cmd_cnt;
 	cmdreq.flags = CMD_REQ_COMMIT;
 
-	
+
 	if (pcmds->link_state == DSI_LP_MODE)
 		cmdreq.flags  |= CMD_REQ_LP_MODE;
 
@@ -193,7 +242,7 @@ static unsigned int bl_to_brightness(int val, int brt_dim, int brt_min, int brt_
 	return brt_val;
 }
 
-static char led_pwm1[3] = {0x51, 0x0, 0x0};	
+static char led_pwm1[3] = {0x51, 0x0, 0x0};
 static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
@@ -206,10 +255,19 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	pr_debug("%s: level=%d\n", __func__, level);
 
-	if (!pinfo->act_brt)
-		led_pwm1[1] = (unsigned char)shrink_pwm(level, ctrl->pwm_min, ctrl->pwm_default, ctrl->pwm_max);
-	else
+	if (!pinfo->act_brt) {
+		//backlight dimmer
+		if (backlight_dimmer == 1) {  //original is 6,56,255 my first version was 1,25,125
+			led_pwm1[1] = (unsigned char)shrink_pwm(level, 1, 45, 175);
+		} else if (backlight_dimmer == 2) {
+			led_pwm1[1] = (unsigned char)shrink_pwm(level, 1, 35, 130);
+		//stock
+		} else	{
+			led_pwm1[1] = (unsigned char)shrink_pwm(level, ctrl->pwm_min, ctrl->pwm_default, ctrl->pwm_max);
+		}
+	} else {
 		led_pwm1[1] = (unsigned char)linear_pwm(level, pinfo->max_brt, pinfo->bl_max);
+	}
 
 	led_pwm1[2] = led_pwm1[1];
 	memset(&cmdreq, 0, sizeof(cmdreq));
@@ -332,8 +390,8 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	return rc;
 }
 
-static char caset[] = {0x2a, 0x00, 0x00, 0x03, 0x00};	
-static char paset[] = {0x2b, 0x00, 0x00, 0x05, 0x00};	
+static char caset[] = {0x2a, 0x00, 0x00, 0x03, 0x00};
+static char paset[] = {0x2b, 0x00, 0x00, 0x05, 0x00};
 
 static struct dsi_cmd_desc partial_update_enable_cmd[] = {
 	{{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(caset)}, caset},
@@ -413,7 +471,7 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 				panel_data);
 
 #ifdef CONFIG_HTC_POWER_HACK
-	
+
 	if (bl_level == 0) {
 		if (ctrl_pdata->cabc_ui_cmds.cmds) {
 			struct dcs_cmd_req cmdreq;
@@ -539,7 +597,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if (ctrl->pwm_ctl_type == PWM_PMIC)
 		led_trigger_event(bl_led_trigger, 0);
 	else if (ctrl->pwm_ctl_type == PWM_EXT)
-		led_trigger_event(bl_led_i2c_trigger, 0); 
+		led_trigger_event(bl_led_i2c_trigger, 0);
 
 	PR_DISP_INFO("%s:-\n", __func__);
 	return 0;
@@ -610,7 +668,7 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 
 	memcpy(buf, data, blen);
 
-	
+
 	bp = buf;
 	len = blen;
 	cnt = 0;
@@ -1123,7 +1181,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	if(!ctrl_pdata->display_on_cmds.cmd_cnt || !ctrl_pdata->display_on_cmds.blen)
 		mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->display_on_cmds,
-			"qcom,display-on-cmds", "qcom,mdss-dsi-default-command-state"); 
+			"qcom,display-on-cmds", "qcom,mdss-dsi-default-command-state");
 
 	rc = of_property_read_u32(np, "qcom,display-on-wait", &tmp);
 	ctrl_pdata->display_on_wait = (!rc ? tmp : 0);
@@ -1296,7 +1354,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 		cont_splash_enabled = false;
 
 #ifdef CONFIG_HTC_POWER_HACK
-	
+
 	rc = of_property_read_u32(node, "qcom,cont-splash-power-hack", &tmp);
 	if (rc) {
 		pr_err("%s:%d, qcom,cont-splash-power-hack not specified\n",
@@ -1343,6 +1401,19 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->off = mdss_dsi_panel_off;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
 	ctrl_pdata->panel_data.display_on = mdss_dsi_display_on;
+
+/* Backlight Dimmer */
+	backlight_dimmer_kobj = kobject_create_and_add("backlight_dimmer", NULL);
+	if (backlight_dimmer_kobj == NULL) {
+		pr_warn("%s kobject create failed!\n", __func__);
+        }
+
+	rc = sysfs_create_group(backlight_dimmer_kobj, &backlight_dimmer_attr_group);
+        if (rc) {
+		pr_warn("%s sysfs file create failed!\n", __func__);
+	}
+
+/* end Backlight Dimmer */
 
 	return 0;
 }
