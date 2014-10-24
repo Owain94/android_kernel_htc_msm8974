@@ -17,15 +17,15 @@ typedef void (*work_func_t)(struct work_struct *work);
 #define work_data_bits(work) ((unsigned long *)(&(work)->data))
 
 enum {
-	WORK_STRUCT_PENDING_BIT	= 0,	
-	WORK_STRUCT_DELAYED_BIT	= 1,	
-	WORK_STRUCT_CWQ_BIT	= 2,	
-	WORK_STRUCT_LINKED_BIT	= 3,	
+	WORK_STRUCT_PENDING_BIT	= 0,
+	WORK_STRUCT_DELAYED_BIT	= 1,
+	WORK_STRUCT_CWQ_BIT	= 2,
+	WORK_STRUCT_LINKED_BIT	= 3,
 #ifdef CONFIG_DEBUG_OBJECTS_WORK
-	WORK_STRUCT_STATIC_BIT	= 4,	
-	WORK_STRUCT_COLOR_SHIFT	= 5,	
+	WORK_STRUCT_STATIC_BIT	= 4,
+	WORK_STRUCT_COLOR_SHIFT	= 5,
 #else
-	WORK_STRUCT_COLOR_SHIFT	= 4,	
+	WORK_STRUCT_COLOR_SHIFT	= 4,
 #endif
 
 	WORK_STRUCT_COLOR_BITS	= 4,
@@ -43,7 +43,7 @@ enum {
 	WORK_NR_COLORS		= (1 << WORK_STRUCT_COLOR_BITS) - 1,
 	WORK_NO_COLOR		= WORK_NR_COLORS,
 
-	
+
 	WORK_CPU_UNBOUND	= NR_CPUS,
 	WORK_CPU_NONE		= NR_CPUS + 1,
 	WORK_CPU_LAST		= WORK_CPU_NONE,
@@ -55,7 +55,7 @@ enum {
 	WORK_STRUCT_WQ_DATA_MASK = ~WORK_STRUCT_FLAG_MASK,
 	WORK_STRUCT_NO_CPU	= WORK_CPU_NONE << WORK_STRUCT_FLAG_BITS,
 
-	
+
 	WORK_BUSY_PENDING	= 1 << 0,
 	WORK_BUSY_RUNNING	= 1 << 1,
 };
@@ -200,12 +200,12 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 	clear_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work))
 
 enum {
-	WQ_NON_REENTRANT	= 1 << 0, 
-	WQ_UNBOUND		= 1 << 1, 
-	WQ_FREEZABLE		= 1 << 2, 
-	WQ_MEM_RECLAIM		= 1 << 3, 
-	WQ_HIGHPRI		= 1 << 4, 
-	WQ_CPU_INTENSIVE	= 1 << 5, 
+	WQ_NON_REENTRANT	= 1 << 0,
+	WQ_UNBOUND		= 1 << 1,
+	WQ_FREEZABLE		= 1 << 2,
+	WQ_MEM_RECLAIM		= 1 << 3,
+	WQ_HIGHPRI		= 1 << 4,
+	WQ_CPU_INTENSIVE	= 1 << 5,
 
 	/*
 	 * Per-cpu workqueues are generally preferred because they tend to
@@ -237,9 +237,8 @@ enum {
 	WQ_DRAINING		= 1 << 7,
 	WQ_RESCUER		= 1 << 8,
 
-	WQ_MAX_ACTIVE		= 512,	  
-	WQ_MAX_UNBOUND_PER_CPU	= 4,	  
- workqueues
+	WQ_MAX_ACTIVE		= 512,
+	WQ_MAX_UNBOUND_PER_CPU	= 4,
 	WQ_DFL_ACTIVE		= WQ_MAX_ACTIVE / 2,
 };
 
@@ -352,12 +351,12 @@ static inline long work_on_cpu(unsigned int cpu, long (*fn)(void *), void *arg)
 }
 #else
 long work_on_cpu(unsigned int cpu, long (*fn)(void *), void *arg);
-#endif 
+#endif
 
 #ifdef CONFIG_FREEZER
 extern void freeze_workqueues_begin(void);
 extern bool freeze_workqueues_busy(void);
 extern void thaw_workqueues(void);
-#endif 
+#endif
 
 #endif
