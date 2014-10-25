@@ -45,6 +45,14 @@ else
 	echo "[kernel] are you network hi" | tee /dev/kmsg
 fi
 
+if [ -e /proc/sys/net/ipv4/tcp_congestion_control ]; then
+	echo "250" > /sys/kernel/mm/ksm/pages_to_scan
+	echo "1200" > /sys/kernel/mm/ksm/sleep_millisecs
+	echo "1" >  /sys/kernel/mm/ksm/run
+else
+	echo "[kernel] Failed to set KSM" | tee /dev/kmsg
+fi
+
 # Enable powersuspend
 if [ -e /sys/kernel/power_suspend/power_suspend_mode ]; then
 	echo "1" > /sys/kernel/power_suspend/power_suspend_mode
