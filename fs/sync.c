@@ -16,6 +16,11 @@
 
 #include <trace/events/mmcio.h>
 
+#ifdef CONFIG_DYNAMIC_FSYNC
+extern bool power_suspend_active;
+extern bool dyn_fsync_active;
+#endif
+
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
 
@@ -58,10 +63,16 @@ static void sync_one_sb(struct super_block *sb, void *arg)
 	if (!(sb->s_flags & MS_RDONLY))
 		__sync_filesystem(sb, *(int *)arg);
 }
-static void sync_filesystems(int wait)
+#ifndef CONFIG_DYNAMIC_FSYNC
+static
+#endif
+void sync_filesystems(int wait)
 {
 	iterate_supers(sync_one_sb, &wait);
 }
+#ifdef CONFIG_DYNAMIC_FSYNC
+EXPORT_SYMBOL_GPL(sync_filesystems);
+#endif
 
 SYSCALL_DEFINE0(sync)
 {
@@ -127,6 +138,11 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !power_suspend_active))
+		return 0;
+	else {
+#endif
 	int err;
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
@@ -134,6 +150,9 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 	err = file->f_op->fsync(file, start, end, datasync);
 	trace_vfs_fsync_done(file);
 	return err;
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 EXPORT_SYMBOL(vfs_fsync_range);
 
@@ -180,11 +199,21 @@ static int do_fsync(unsigned int fd, int datasync)
 
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !power_suspend_active))
+		return 0;
+	else
+#endif
 	return do_fsync(fd, 0);
 }
 
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
+#if 0
+	if (likely(dyn_fsync_active && !power_suspend_active))
+		return 0;
+	else
+#endif
 	return do_fsync(fd, 1);
 }
 
@@ -200,10 +229,15 @@ EXPORT_SYMBOL(generic_write_sync);
 SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 				unsigned int flags)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !power_suspend_active))
+		return 0;
+	else {
+#endif
 	int ret;
 	struct file *file;
 	struct address_space *mapping;
-	loff_t endbyte;			
+	loff_t endbyte;
 	int fput_needed;
 	umode_t i_mode;
 
@@ -233,7 +267,7 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 	if (nbytes == 0)
 		endbyte = LLONG_MAX;
 	else
-		endbyte--;		
+		endbyte--;
 
 	ret = -EBADF;
 	file = fget_light(fd, &fput_needed);
@@ -272,6 +306,9 @@ out_put:
 	fput_light(file, fput_needed);
 out:
 	return ret;
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 #ifdef CONFIG_HAVE_SYSCALL_WRAPPERS
 asmlinkage long SyS_sync_file_range(long fd, loff_t offset, loff_t nbytes,
@@ -286,6 +323,11 @@ SYSCALL_ALIAS(sys_sync_file_range, SyS_sync_file_range);
 SYSCALL_DEFINE(sync_file_range2)(int fd, unsigned int flags,
 				 loff_t offset, loff_t nbytes)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !power_suspend_active))
+		return 0;
+	else
+#endif
 	return sys_sync_file_range(fd, offset, nbytes, flags);
 }
 #ifdef CONFIG_HAVE_SYSCALL_WRAPPERS
