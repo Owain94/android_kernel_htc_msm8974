@@ -37,6 +37,14 @@ else
 	start mpdecision
 fi
 
+# Set TCP westwood
+if [ -e /proc/sys/net/ipv4/tcp_congestion_control ]; then
+	echo "westwood" > /proc/sys/net/ipv4/tcp_congestion_control
+	echo "[kernel] TCP set: westwood" | tee /dev/kmsg
+else
+	echo "[kernel] are you network hi" | tee /dev/kmsg
+fi
+
 # Enable powersuspend
 if [ -e /sys/kernel/power_suspend/power_suspend_mode ]; then
 	echo "1" > /sys/kernel/power_suspend/power_suspend_mode
