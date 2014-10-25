@@ -78,7 +78,7 @@ else
 		y|Y )
 			cleanme;;
 		n|N )
-			echo "Ok";;
+			exit 0;;
 		* )
 			echo "Invalid...";;
 	esac
