@@ -27,6 +27,9 @@
 #define KGSL_CONVERT_TO_MBPS(val) \
 	(val*1000*1000U)
 
+//gboost
+extern int graphics_boost;
+
 #define KGSL_3D0_REG_MEMORY	"kgsl_3d0_reg_memory"
 #define KGSL_3D0_SHADER_MEMORY	"kgsl_3d0_shader_memory"
 #define KGSL_3D0_IRQ		"kgsl_3d0_irq"

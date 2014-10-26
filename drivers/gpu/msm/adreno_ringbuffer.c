@@ -1117,12 +1117,6 @@ adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 	/* wait for the suspend gate */
 	wait_for_completion(&device->cmdbatch_gate);
 
-<<<<<<< HEAD
-
-	device->flags &= ~KGSL_FLAG_WAKE_ON_TOUCH;
-
-	
-=======
 	/*
 	 * Clear the wake on touch bit to indicate an IB has been submitted
 	 * since the last time we set it
@@ -1131,7 +1125,6 @@ adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 	device->flags &= ~KGSL_FLAG_WAKE_ON_TOUCH;
 
 	/* Queue the command in the ringbuffer */
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 	ret = adreno_dispatcher_queue_cmd(adreno_dev, drawctxt, cmdbatch,
 		timestamp);
 

@@ -254,12 +254,6 @@ static const struct {
 		512, 0, 2, SZ_128K, 0x3FF037, 0x3FF016 },
 };
 
-<<<<<<< HEAD
-static int _wake_nice = -7;
-
-static unsigned int _wake_timeout = 100;
-
-=======
 /* Nice level for the higher priority GPU start thread */
 static unsigned int _wake_nice = -7;
 
@@ -272,7 +266,6 @@ static unsigned int _wake_timeout = 100;
  * to avoid the need to maintain state.  Either somebody will start using the
  * GPU or the idle timer will fire and put the GPU back into slumber
  */
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 static void adreno_input_work(struct work_struct *work)
 {
 	struct adreno_device *adreno_dev = container_of(work,
@@ -283,10 +276,6 @@ static void adreno_input_work(struct work_struct *work)
 
 	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
 
-<<<<<<< HEAD
-	kgsl_pwrctrl_wake(device, 0);
-
-=======
 	/*
 	 * Don't schedule adreno_start in a high priority workqueue, we are
 	 * already in a workqueue which should be sufficient
@@ -299,7 +288,6 @@ static void adreno_input_work(struct work_struct *work)
 	 * is shorter than we want so go ahead and push the idle timer out
 	 * further for this special case
 	 */
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 	mod_timer(&device->idle_timer,
 		jiffies + msecs_to_jiffies(_wake_timeout));
 	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
@@ -353,13 +341,10 @@ static void adreno_input_disconnect(struct input_handle *handle)
 	kfree(handle);
 }
 
-<<<<<<< HEAD
-=======
 /*
  * We are only interested in EV_ABS events so only register handlers for those
  * input devices that have EV_ABS events
  */
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 static const struct input_device_id adreno_input_ids[] = {
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
@@ -1845,13 +1830,10 @@ adreno_probe(struct platform_device *pdev)
 
 	adreno_input_handler.private = device;
 
-<<<<<<< HEAD
-=======
 	/*
 	 * It isn't fatal if we cannot register the input handler.  Sad,
 	 * perhaps, but not fatal
 	 */
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 	if (input_register_handler(&adreno_input_handler))
 		KGSL_DRV_ERR(device, "Unable to register the input handler\n");
 
@@ -2243,9 +2225,6 @@ int adreno_reset(struct kgsl_device *device)
 	return ret;
 }
 
-<<<<<<< HEAD
-static int _ft_sysfs_store(const char *buf, size_t count, int *ptr)
-=======
 /**
  * _ft_sysfs_store() -  Common routine to write to FT sysfs files
  * @buf: value to write
@@ -2255,7 +2234,6 @@ static int _ft_sysfs_store(const char *buf, size_t count, int *ptr)
  * This is a common routine to write to FT sysfs files.
  */
 static int _ft_sysfs_store(const char *buf, size_t count, unsigned int *ptr)
->>>>>>> 06e4ce5... GPU: merge with CAF kk_3.5
 {
 	char temp[20];
 	long val;
