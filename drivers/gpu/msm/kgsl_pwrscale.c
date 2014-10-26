@@ -33,7 +33,7 @@ void kgsl_pwrscale_sleep(struct kgsl_device *device)
 		return;
 	device->pwrscale.time = device->pwrscale.on_time = 0;
 
-	
+
 	queue_work(device->pwrscale.devfreq_wq,
 		&device->pwrscale.devfreq_suspend_ws);
 }
@@ -46,18 +46,18 @@ void kgsl_pwrscale_wake(struct kgsl_device *device)
 
 	if (!device->pwrscale.enabled)
 		return;
-	
+
 	memset(&device->pwrscale.accum_stats, 0,
 		sizeof(device->pwrscale.accum_stats));
 
-	
+
 	device->ftbl->power_stats(device, &stats);
 
 	device->pwrscale.time = ktime_to_us(ktime_get());
 
 	device->pwrscale.next_governor_call = 0;
 
-	
+
 	queue_work(device->pwrscale.devfreq_wq,
 		&device->pwrscale.devfreq_resume_ws);
 }
@@ -97,7 +97,7 @@ void kgsl_pwrscale_update(struct kgsl_device *device)
 		device->pwrscale.accum_stats.ram_wait += stats.ram_wait;
 	}
 
-	
+
 	if (device->requested_state != KGSL_STATE_SLUMBER)
 		queue_work(device->pwrscale.devfreq_wq,
 			&device->pwrscale.devfreq_notify_ws);
@@ -317,10 +317,10 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 
 	profile->initial_freq =
 		pwr->pwrlevels[pwr->default_pwrlevel].gpu_freq;
-	
+
 	profile->polling_ms = 10;
 
-	
+
 	for (i = 0; i < (pwr->num_pwrlevels - 1); i++)
 		pwrscale->freq_table[out++] = pwr->pwrlevels[i].gpu_freq;
 
@@ -332,11 +332,11 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 	/* link storage array to the devfreq profile pointer */
 	profile->freq_table = pwrscale->freq_table;
 
-	
+
 	if (profile->max_state == 1)
 		governor = "performance";
 
-	
+
 	for (i = 0; i < profile->num_governor_data; i++) {
 		if (strncmp("msm-adreno-tz",
 				profile->governor_data[i].name,
