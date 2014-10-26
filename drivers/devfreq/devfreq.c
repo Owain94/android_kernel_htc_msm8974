@@ -4,7 +4,7 @@
  *
  * Copyright (C) 2011 Samsung Electronics
  *	MyungJoo Ham <myungjoo.ham@samsung.com>
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -409,7 +409,7 @@ struct devfreq *devfreq_add_device(struct device *dev,
 						devfreq->profile->max_state *
 						devfreq->profile->max_state,
 						GFP_KERNEL);
-	devfreq->time_in_state = devm_kzalloc(dev, sizeof(unsigned long) *
+	devfreq->time_in_state = devm_kzalloc(dev, sizeof(unsigned int) *
 						devfreq->profile->max_state,
 						GFP_KERNEL);
 	devfreq->last_stat_updated = jiffies;
@@ -872,7 +872,7 @@ static ssize_t show_trans_table(struct device *dev, struct device_attribute *att
 	len = sprintf(buf, "   From  :   To\n");
 	len += sprintf(buf + len, "         :");
 	for (i = 0; i < max_state; i++)
-		len += sprintf(buf + len, "%8lu",
+		len += sprintf(buf + len, "%8u",
 				devfreq->profile->freq_table[i]);
 
 	len += sprintf(buf + len, "   time(ms)\n");
@@ -884,7 +884,7 @@ static ssize_t show_trans_table(struct device *dev, struct device_attribute *att
 		} else {
 			len += sprintf(buf + len, " ");
 		}
-		len += sprintf(buf + len, "%8lu:",
+		len += sprintf(buf + len, "%8u:",
 				devfreq->profile->freq_table[i]);
 		for (j = 0; j < max_state; j++)
 			len += sprintf(buf + len, "%8u",
