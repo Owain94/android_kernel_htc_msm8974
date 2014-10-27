@@ -13,6 +13,7 @@
 #include <linux/jhash.h>
 #include <linux/hash.h>
 #include <linux/cache.h>
+#include <linux/module.h>
 
 static struct fast_hash_ops arch_hash_ops __read_mostly = {
 	.hash  = jhash,

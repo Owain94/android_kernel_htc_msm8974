@@ -161,11 +161,11 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 
 	cur_load = 100 * (wall_time - idle_time) / wall_time;
 
-	
+
 	load_at_max_freq = (cur_load * freq) / pcpu->policy_max;
 
 	if (!pcpu->avg_load_maxfreq) {
-		
+
 		pcpu->avg_load_maxfreq = load_at_max_freq;
 		pcpu->window_size = wall_time;
 	} else {
@@ -289,7 +289,7 @@ void enable_rq_load_calc(bool on)
 		load_stats_enabled = on;
 
 		pr_info("Enable rq_stats load calculation %d\n", load_stats_enabled);
-		
+
 		if (!rq_data_init_done)
 			return;
 
@@ -349,7 +349,7 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	unsigned long flags = 0;
 
 	spin_lock_irqsave(&rq_lock, flags);
-	
+
 	val = rq_info.rq_avg;
 	rq_info.rq_avg = 0;
 	spin_unlock_irqrestore(&rq_lock, flags);
@@ -449,7 +449,7 @@ static int init_rq_attribs(void)
 	rq_info.rq_avg = 0;
 	rq_info.attr_group = &rq_attr_group;
 
-	
+
 	rq_info.kobj = kobject_create_and_add("rq-stats",
 			&get_cpu_device(0)->kobj);
 	if (!rq_info.kobj)
@@ -501,7 +501,7 @@ static int __init msm_rq_stats_init(void)
 	freq_transition.notifier_call = cpufreq_transition_handler;
 	cpu_hotplug.notifier_call = cpu_hotplug_handler;
 	freq_policy.notifier_call = freq_policy_handler;
-	
+
 	if (load_stats_enabled){
 		cpufreq_register_notifier(&freq_transition,
 					CPUFREQ_TRANSITION_NOTIFIER);
@@ -509,7 +509,7 @@ static int __init msm_rq_stats_init(void)
 		cpufreq_register_notifier(&freq_policy,
 					CPUFREQ_POLICY_NOTIFIER);
 	}
-	
+
 	rq_data_init_done = true;
 	return ret;
 }
