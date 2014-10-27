@@ -515,7 +515,7 @@ static bool msm_pm_pc_hotplug(void)
 	scm_call_atomic1(SCM_SVC_BOOT, SCM_CMD_TERMINATE_PC,
 			SCM_CMD_CORE_HOTPLUGGED);
 
-	
+
 	msm_pc_inc_debug_count(cpu, MSM_PC_FALLTHRU_COUNTER);
 	return 0;
 }
@@ -629,7 +629,9 @@ static bool __ref msm_pm_spm_power_collapse(
 	bool collapsed = 0;
 	int ret;
 	bool save_cpu_regs = !cpu || from_idle;
+#ifdef CONFIG_HTC_POWER_DEBUG
 	int curr_len = 0;
+#endif
 
 	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: notify_rpm %d\n",
@@ -752,7 +754,7 @@ static enum msm_pm_time_stats_id msm_pm_power_collapse_standalone(
 
 	avsdscr = avs_get_avsdscr();
 	avscsr = avs_get_avscsr();
-	avs_set_avscsr(0); 
+	avs_set_avscsr(0);
 
 	collapsed = msm_pm_spm_power_collapse(cpu, from_idle, false);
 
@@ -826,7 +828,7 @@ static enum msm_pm_time_stats_id msm_pm_power_collapse(bool from_idle)
 	unsigned int avscsr;
 	bool collapsed;
 
-	
+
 	if ((from_idle && (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)) ||
 			(!from_idle && (smp_processor_id() == 0))) {
 		clock_debug_print_enabled();
@@ -857,7 +859,7 @@ static enum msm_pm_time_stats_id msm_pm_power_collapse(bool from_idle)
 
 	avsdscr = avs_get_avsdscr();
 	avscsr = avs_get_avscsr();
-	avs_set_avscsr(0); 
+	avs_set_avscsr(0);
 
 	if (cpu_online(cpu) && !msm_no_ramp_down_pc)
 		saved_acpuclk_rate = ramp_down_last_cpu(cpu);
@@ -898,7 +900,7 @@ static enum msm_pm_time_stats_id msm_pm_power_collapse(bool from_idle)
 	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: return\n", cpu, __func__);
 
-	
+
 	if (!cpu && !from_idle)
 		keep_dig_voltage_low_in_idle(true);
 
@@ -1022,11 +1024,11 @@ int msm_cpu_pm_enter_sleep(enum msm_pm_sleep_mode mode, bool from_idle)
 	return collapsed;
 }
 
-#define MAX_CPU_SHUTDOWN_TIMEOUT	(10000)	
+#define MAX_CPU_SHUTDOWN_TIMEOUT	(10000)
 
 static int cpu_shutdown_retry_max[NR_CPUS];
 
-#define MAX_CPU_SHUTDOWN_TIMEOUT	(10000)	
+#define MAX_CPU_SHUTDOWN_TIMEOUT	(10000)
 
 static int cpu_shutdown_retry_max[NR_CPUS];
 
