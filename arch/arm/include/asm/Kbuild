@@ -31,8 +31,6 @@ generic-y += shmbuf.h
 generic-y += siginfo.h
 generic-y += simd.h
 generic-y += sizes.h
-<<<<<<< HEAD
-=======
 generic-y += socket.h
 generic-y += sockios.h
 generic-y += termbits.h
@@ -40,4 +38,3 @@ generic-y += timex.h
 generic-y += types.h
 generic-y += termios.h
 generic-y += unaligned.h
->>>>>>> a3ef455... ARM: 7491/1: use generic version of identical asm headers
