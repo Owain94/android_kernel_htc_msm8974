@@ -7,10 +7,8 @@
 build=/Volumes/android/out/target/product/m8
 export PATH=/Volumes/android/prebuilts/gcc/darwin-x86/arm/arm-eabi-4.7/bin:$PATH
 
-kernel="Owain"
-version="1.0.0"
-rom="aosp"
-variant="m8"
+kernel="Domination"
+version="v1"
 ramdisk=ramdisk
 config="cm_m8_defconfig"
 kerneltype="zImage"
@@ -121,16 +119,16 @@ else
 	exit 0;
 fi
 
-# echo "Zipping..."
+echo "Zipping..."
 if [ -f arch/arm/boot/"$kerneltype" ]; then
-# 	cd ozip
-# 	zip -r ../"$kernel"-$version-"$rom"_"$variant".zip .
-# 	mv ../"$kernel"-$version-"$rom"_"$variant".zip $build
-# 	cd ..
+	cd ozip
+	zip -r ../"$kernel"-$version.zip .
+	mv ../"$kernel"-$version.zip $build
+	cd ..
 	rm -rf out ozip/system
-# 	echo "Done..."
-# 	echo "Output zip: $build/$kernel-$version-$(echo $rom)_$variant.zip"
-# 	exit 0;
+	echo "Done..."
+	echo "Output zip: $build/$kernel-$version.zip"
+	exit 0;
 else
 	echo "No $kerneltype found..."
 	exit 0;

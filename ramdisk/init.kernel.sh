@@ -27,38 +27,54 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+DOM_LOGFILE="/data/local/tmp/dom.log"
+
+#Find PVS bin
+PVS="`cat /sys/module/clock_krait_8974/parameters/pvs_number`"
+echo PVS: $PVS >> $DOM_LOGFILE;
+
 # Disable MPD, enable intelliplug
 if [ -e /sys/module/intelli_plug/parameters/intelli_plug_active ]; then
 	stop mpdecision
 	echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-	echo "[kernel] IntelliPlug enabled" | tee /dev/kmsg
+	echo "[kernel] IntelliPlug enabled" | tee -a $DOM_LOGFILE;
 else
-	echo "[kernel] IntelliPlug not found, using MPDecision" | tee /dev/kmsg
+	echo "[kernel] IntelliPlug not found, using MPDecision" | tee -a $DOM_LOGFILE;
 	start mpdecision
 fi
 
 # Set TCP westwood
 if [ -e /proc/sys/net/ipv4/tcp_congestion_control ]; then
 	echo "westwood" > /proc/sys/net/ipv4/tcp_congestion_control
-	echo "[kernel] TCP set: westwood" | tee /dev/kmsg
+	echo "[kernel] TCP set: westwood" | tee -a $DOM_LOGFILE;
 else
-	echo "[kernel] are you network hi" | tee /dev/kmsg
+	echo "[kernel] are you network hi" | tee -a $DOM_LOGFILE;
 fi
 
-if [ -e /proc/sys/net/ipv4/tcp_congestion_control ]; then
+# KSM
+if [ -e /sys/kernel/mm/ksm/run ]; then
 	echo "250" > /sys/kernel/mm/ksm/pages_to_scan
 	echo "1200" > /sys/kernel/mm/ksm/sleep_millisecs
 	echo "1" >  /sys/kernel/mm/ksm/run
 else
-	echo "[kernel] Failed to set KSM" | tee /dev/kmsg
+	echo "[kernel] Failed to set KSM" | tee -a $DOM_LOGFILE;
 fi
+
+# Screen off
+if [ -e /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max ]; then
+	echo "1" > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max
+else
+	echo "[kernel] Failed to set screen off max" | tee -a $DOM_LOGFILE;
+fi
+
+echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/screen_off_max
 
 # Enable powersuspend
 if [ -e /sys/kernel/power_suspend/power_suspend_mode ]; then
 	echo "1" > /sys/kernel/power_suspend/power_suspend_mode
-	echo "[kernel] Powersuspend enabled" | tee /dev/kmsg
+	echo "[kernel] Powersuspend enabled" | tee -a $DOM_LOGFILE;
 else
-	echo "[kernel] Failed to set powersuspend" | tee /dev/kmsg
+	echo "[kernel] Failed to set powersuspend" | tee -a $DOM_LOGFILE;
 fi
 
 # Set RGB KCAL
@@ -69,15 +85,38 @@ if [ -e /sys/devices/platform/kcal_ctrl.0/kcal ]; then
 	kcal="$sd_r $sd_g $sd_b"
 	echo "$kcal" > /sys/devices/platform/kcal_ctrl.0/kcal
 	echo "1" > /sys/devices/platform/kcal_ctrl.0/kcal_ctrl
-	echo "[kernel] LCD_KCAL: red=[$sd_r], green=[$sd_g], blue=[$sd_b]" | tee /dev/kmsg
+	echo "[kernel] LCD_KCAL: red=[$sd_r], green=[$sd_g], blue=[$sd_b]" | tee -a $DOM_LOGFILE;
 fi
 
+# Freq
 if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
 	echo "2265600" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 	echo "2265600" > /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq
 	echo "2265600" > /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq
 	echo "2265600" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq
-	echo "[kernel] Max freq set: 2265600" | tee /dev/kmsg
+	echo "[kernel] Max freq set: 2265600" | tee -a $DOM_LOGFILE;
 else
-	echo "[kernel] Call the police!" | tee /dev/kmsg
+	echo "[kernel] Call the police!" | tee -a $DOM_LOGFILE;
 fi
+
+# BacklightDimmer
+if [ -e /sys/backlight_dimmer/backlight_dimmer; ]; then
+	echo "1" > /sys/backlight_dimmer/backlight_dimmer;
+	echo "[kernel] Backlight dimmer enabled"  | tee -a $DOM_LOGFILE;
+else
+	echo "[kernel] Failed to set backlight dimmer!" | tee -a $DOM_LOGFILE;
+fi
+
+# CpuBoost
+if [ -e /sys/module/cpu_boost/parameters/boost_ms ]; then
+	echo "20" > /sys/module/cpu_boost/parameters/boost_ms;
+	echo "1190400" > /sys/module/cpu_boost/parameters/sync_threshold;
+	echo "1190400" > /sys/module/cpu_boost/parameters/input_boost_freq;
+	echo "40" > /sys/module/cpu_boost/parameters/input_boost_ms;
+	echo "[kernel] Cpuboost set"  | tee -a $DOM_LOGFILE;
+else
+	echo "[kernel] Failed to set cpuboost!" | tee -a $DOM_LOGFILE;
+fi
+
+fstrim -v /cache | tee -a $DOM_LOGFILE;
+fstrim -v /data | tee -a $DOM_LOGFILE;
