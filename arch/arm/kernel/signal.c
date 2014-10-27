@@ -41,8 +41,8 @@ static const unsigned long sigreturn_codes[7] = {
 };
 
 const unsigned long syscall_restart_code[2] = {
-	SWI_SYS_RESTART,	
-	0xe49df004,		
+	SWI_SYS_RESTART,
+	0xe49df004,
 };
 
 asmlinkage int sys_sigsuspend(int restart, unsigned long oldmask, old_sigset_t mask)
@@ -61,7 +61,7 @@ asmlinkage int sys_sigsuspend(int restart, unsigned long oldmask, old_sigset_t m
 	return -ERESTARTNOHAND;
 }
 
-asmlinkage int 
+asmlinkage int
 sys_sigaction(int sig, const struct old_sigaction __user *act,
 	      struct old_sigaction __user *oact)
 {
@@ -101,7 +101,7 @@ static int preserve_crunch_context(struct crunch_sigframe __user *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct crunch_sigframe *kframe;
 
-	
+
 	kframe = (struct crunch_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	kframe->magic = CRUNCH_MAGIC;
 	kframe->size = CRUNCH_STORAGE_SIZE;
@@ -114,7 +114,7 @@ static int restore_crunch_context(struct crunch_sigframe __user *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct crunch_sigframe *kframe;
 
-	
+
 	kframe = (struct crunch_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	if (__copy_from_user(kframe, frame, sizeof(*frame)))
 		return -1;
@@ -133,7 +133,7 @@ static int preserve_iwmmxt_context(struct iwmmxt_sigframe *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct iwmmxt_sigframe *kframe;
 
-	
+
 	kframe = (struct iwmmxt_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	kframe->magic = IWMMXT_MAGIC;
 	kframe->size = IWMMXT_STORAGE_SIZE;
@@ -146,7 +146,7 @@ static int restore_iwmmxt_context(struct iwmmxt_sigframe *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct iwmmxt_sigframe *kframe;
 
-	
+
 	kframe = (struct iwmmxt_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	if (__copy_from_user(kframe, frame, sizeof(*frame)))
 		return -1;
@@ -258,7 +258,7 @@ asmlinkage int sys_sigreturn(struct pt_regs *regs)
 {
 	struct sigframe __user *frame;
 
-	
+
 	current_thread_info()->restart_block.fn = do_no_restart_syscall;
 
 	if (regs->ARM_sp & 7)
@@ -283,7 +283,7 @@ asmlinkage int sys_rt_sigreturn(struct pt_regs *regs)
 {
 	struct rt_sigframe __user *frame;
 
-	
+
 	current_thread_info()->restart_block.fn = do_no_restart_syscall;
 
 	if (regs->ARM_sp & 7)
@@ -495,7 +495,7 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	return err;
 }
 
-	
+
 static int
 handle_signal(unsigned long sig, struct k_sigaction *ka,
 	      siginfo_t *info, sigset_t *oldset,
@@ -554,9 +554,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 		}
 	}
 
-	if (try_to_freeze())
-		goto no_signal;
-
 	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
 	if (signr > 0) {
 		sigset_t *oldset;
@@ -581,7 +578,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 		return;
 	}
 
- no_signal:
 	if (syscall) {
 		if (retval == -ERESTART_RESTARTBLOCK
 		    && regs->ARM_pc == continue_addr) {
@@ -643,7 +639,7 @@ struct page *get_signal_page(void)
 
 	addr = page_address(page);
 
-	
+
 	offset = 0x200 + (get_random_int() & 0x7fc);
 	signal_return_offset = offset;
 
