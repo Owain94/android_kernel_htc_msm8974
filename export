@@ -4,6 +4,16 @@
 # If you are using a non-appended dt.image, you will need to add "--dt path/to/dt.img" and
 # the appropriate lines for dtbTool to compile it, if not prebuilt.
 
+# get OS (linux / Mac OS x)
+IS_DARWIN=$(uname -a | grep Darwin)
+if [ -n "$IS_DARWIN" ]; then
+	CPUS=$(sysctl hw.ncpu | awk '{print $2}')
+	DATE=gdate
+else
+	CPUS=$(grep "^processor" /proc/cpuinfo | wc -l)
+	DATE=date
+fi
+
 build=/Volumes/android/out/target/product/m8
 export PATH=/Volumes/android/prebuilts/gcc/darwin-x86/arm/arm-eabi-4.7/bin:$PATH
 
@@ -12,7 +22,7 @@ version="v1"
 ramdisk=ramdisk
 config="cm_m8_defconfig"
 kerneltype="zImage"
-jobcount="-j6"
+jobcount=-j"$CPUS"
 ps=2048
 base=0x00000000
 kernel_offset=0x00008000
@@ -59,6 +69,7 @@ if [ -f ozip/boot.img ]; then
 fi
 echo "Extracting files..."
 if [ -f arch/arm/boot/"$kerneltype" ]; then
+	t1=$($DATE +%s)
 	cp arch/arm/boot/"$kerneltype" out
 	rm -rf ozip/system
 	mkdir -p ozip/system/lib/modules
@@ -83,8 +94,13 @@ else
 	read -p "Begin build now..(y/n)? : " bchoice
 	case "$bchoice" in
 		y|Y)
+			t1=$($DATE +%s)
 			make "$config"
 			make "$jobcount"
+			t2=$($DATE +%s)
+			tmin=$(( (t2-t1)/60 ))
+			tsec=$(( (t2-t1)%60 ))
+			echo "Total time elapsed: $tmin minutes $tsec seconds"
 			exit 0;;
 		n|N )
 			exit 0;;
@@ -121,6 +137,7 @@ fi
 
 echo "Zipping..."
 if [ -f arch/arm/boot/"$kerneltype" ]; then
+	rm $build/$kernel-$version.zip
 	cd ozip
 	zip -r ../"$kernel"-$version.zip .
 	mv ../"$kernel"-$version.zip $build
@@ -128,6 +145,10 @@ if [ -f arch/arm/boot/"$kerneltype" ]; then
 	rm -rf out ozip/system
 	echo "Done..."
 	echo "Output zip: $build/$kernel-$version.zip"
+	t2=$($DATE +%s)
+	tmin=$(( (t2-t1)/60 ))
+	tsec=$(( (t2-t1)%60 ))
+	echo "Total time elapsed: $tmin minutes $tsec seconds"
 	exit 0;
 else
 	echo "No $kerneltype found..."
