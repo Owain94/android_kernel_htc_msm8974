@@ -14,7 +14,7 @@ else
 	DATE=date
 fi
 
-build=/Volumes/android/out/target/product/m8
+build=/Volumes/kernel/msm8974/ozip
 export PATH=/Volumes/android/prebuilts/gcc/darwin-x86/arm/arm-eabi-4.7/bin:$PATH
 
 kernel="Domination"
@@ -22,7 +22,7 @@ version="v1"
 ramdisk=ramdisk
 config="cm_m8_defconfig"
 kerneltype="zImage"
-jobcount=-j"$CPUS"
+jobcount=-j"`echo -e "$CPUS\t1.5" | awk '{print $1 * $2}'`"
 ps=2048
 base=0x00000000
 kernel_offset=0x00008000
@@ -31,6 +31,7 @@ tags_offset=0x01e00000
 cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=qcom user_debug=31 ehci-hcd.park=3 zcache eco_mode=0"
 
 function cleanme {
+	t1=$($DATE +%s)
 	if [ -f arch/arm/boot/"$kerneltype" ]; then
 		echo "  CLEAN   ozip"
 	fi
@@ -39,6 +40,10 @@ function cleanme {
 	mkdir -p ozip/system/lib/modules
 	make clean "$jobcount" && make mrproper "$jobcount"
 	echo "Working directory cleaned..."
+	t2=$($DATE +%s)
+	tmin=$(( (t2-t1)/60 ))
+	tsec=$(( (t2-t1)%60 ))
+	echo "Total time elapsed: $tmin minutes $tsec seconds"
 }
 
 rm -rf out
