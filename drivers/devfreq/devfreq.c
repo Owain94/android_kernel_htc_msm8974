@@ -149,7 +149,7 @@ int update_devfreq(struct devfreq *devfreq)
 	if (!devfreq->governor)
 		return -EINVAL;
 
-	
+
 	err = devfreq->governor->get_target_freq(devfreq, &freq, &flags);
 	if (err)
 		return err;
@@ -157,11 +157,11 @@ int update_devfreq(struct devfreq *devfreq)
 
 	if (devfreq->min_freq && freq < devfreq->min_freq) {
 		freq = devfreq->min_freq;
-		flags &= ~DEVFREQ_FLAG_LEAST_UPPER_BOUND; 
+		flags &= ~DEVFREQ_FLAG_LEAST_UPPER_BOUND;
 	}
 	if (devfreq->max_freq && freq > devfreq->max_freq) {
 		freq = devfreq->max_freq;
-		flags |= DEVFREQ_FLAG_LEAST_UPPER_BOUND; 
+		flags |= DEVFREQ_FLAG_LEAST_UPPER_BOUND;
 	}
 
 	err = devfreq->profile->target(devfreq->dev.parent, &freq, flags);
@@ -251,21 +251,21 @@ void devfreq_interval_update(struct devfreq *devfreq, unsigned int *delay)
 	if (devfreq->stop_polling)
 		goto out;
 
-	
+
 	if (!new_delay) {
 		mutex_unlock(&devfreq->lock);
 		cancel_delayed_work_sync(&devfreq->work);
 		return;
 	}
 
-	
+
 	if (!cur_delay) {
 		queue_delayed_work(devfreq_wq, &devfreq->work,
 			msecs_to_jiffies(devfreq->profile->polling_ms));
 		goto out;
 	}
 
-	
+
 	if (cur_delay > new_delay) {
 		mutex_unlock(&devfreq->lock);
 		cancel_delayed_work_sync(&devfreq->work);
@@ -503,7 +503,7 @@ int devfreq_add_governor(struct devfreq_governor *governor)
 
 		if (!strncmp(devfreq->governor_name, governor->name,
 			     DEVFREQ_NAME_LEN)) {
-			
+
 			if (devfreq->governor) {
 				dev_warn(dev,
 					 "%s: Governor %s already present\n",
@@ -516,7 +516,7 @@ int devfreq_add_governor(struct devfreq_governor *governor)
 						 __func__,
 						 devfreq->governor->name, ret);
 				}
-				
+
 			}
 			devfreq->governor = governor;
 			ret = devfreq->governor->event_handler(devfreq,
@@ -561,12 +561,12 @@ int devfreq_remove_governor(struct devfreq_governor *governor)
 
 		if (!strncmp(devfreq->governor_name, governor->name,
 			     DEVFREQ_NAME_LEN)) {
-			
+
 			if (!devfreq->governor) {
 				dev_warn(dev, "%s: Governor %s NOT present\n",
 					 __func__, governor->name);
 				continue;
-				
+
 			}
 			ret = devfreq->governor->event_handler(devfreq,
 						DEVFREQ_GOV_STOP, NULL);
@@ -652,7 +652,7 @@ static ssize_t show_available_governors(struct device *d,
 				   "%s ", tmp_governor->name);
 	mutex_unlock(&devfreq_list_lock);
 
-	
+
 	if (count)
 		count--;
 
@@ -666,6 +666,11 @@ static ssize_t show_freq(struct device *dev,
 {
 	unsigned long freq;
 	struct devfreq *devfreq = to_devfreq(dev);
+
+	if (devfreq->state == KGSL_STATE_SLUMBER) {
+		freq = 27000000;
+		return sprintf(buf, "%lu\n", freq);
+	}
 
 	if (devfreq->profile->get_cur_freq &&
 		!devfreq->profile->get_cur_freq(devfreq->dev.parent, &freq))
@@ -795,7 +800,7 @@ static ssize_t show_available_freqs(struct device *d,
 	} while (1);
 	rcu_read_unlock();
 
-	
+
 	if (count)
 		count--;
 
@@ -893,17 +898,17 @@ struct opp *devfreq_recommended_opp(struct device *dev, unsigned long *freq,
 	struct opp *opp;
 
 	if (flags & DEVFREQ_FLAG_LEAST_UPPER_BOUND) {
-		
+
 		opp = opp_find_freq_floor(dev, freq);
 
-		
+
 		if (opp == ERR_PTR(-ERANGE))
 			opp = opp_find_freq_ceil(dev, freq);
 	} else {
-		
+
 		opp = opp_find_freq_ceil(dev, freq);
 
-		
+
 		if (opp == ERR_PTR(-ERANGE))
 			opp = opp_find_freq_floor(dev, freq);
 	}
