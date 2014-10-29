@@ -88,17 +88,6 @@ static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
 	return iowait_time;
 }
 
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
-							cputime64_t *wall)
-{
-	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
-
-	if (iowait_time == -1ULL)
-		return 0;
-
-	return iowait_time;
-}
-
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
