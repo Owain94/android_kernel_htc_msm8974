@@ -373,7 +373,7 @@ int mdp3_bus_scale_set_quota(int client, u64 ab_quota, u64 ib_quota)
 
 		bus_idx = (cur_bus_idx % (num_cases - 1)) + 1;
 
-		
+
 		ab_quota = ALIGN(ab_quota, SZ_64M);
 		ib_quota = ALIGN(ib_quota, SZ_64M);
 
@@ -882,13 +882,13 @@ static int mdp3_get_pan_cfg(struct mdss_panel_cfg *pan_cfg)
 	} else if (pan_name[0] == '1') {
 		pan_cfg->lk_cfg = true;
 	} else {
-		
+
 		pan_cfg->lk_cfg = true;
 		pan_cfg->pan_intf = MDSS_PANEL_INTF_INVALID;
 		return -EINVAL;
 	}
 
-	
+
 	strlcpy(pan_name, &pan_name[2], MDSS_MAX_PANEL_LEN);
 	t = strnstr(pan_name, ":", MDSS_MAX_PANEL_LEN);
 	if (!t) {
@@ -902,7 +902,7 @@ static int mdp3_get_pan_cfg(struct mdss_panel_cfg *pan_cfg)
 		pan_intf_str[i] = *(pan_name + i);
 	pan_intf_str[i] = 0;
 	pr_debug("%s:%d panel intf %s\n", __func__, __LINE__, pan_intf_str);
-	
+
 	t = t + 1;
 	strlcpy(&pan_cfg->arg_cfg[0], t, sizeof(pan_cfg->arg_cfg));
 	pr_debug("%s:%d: t=[%s] panel name=[%s]\n", __func__, __LINE__,
@@ -928,7 +928,7 @@ static int mdp3_parse_bootarg(struct platform_device *pdev)
 	panel_name = &pan_cfg->arg_cfg[0];
 	intf_type = &pan_cfg->pan_intf;
 
-	
+
 	pan_cfg->lk_cfg = true;
 
 	chosen_node = of_find_node_by_name(NULL, "chosen");
@@ -997,7 +997,7 @@ static int mdp3_parse_bootarg(struct platform_device *pdev)
 
 get_dt_pan:
 	rc = mdp3_parse_dt_pan_intf(pdev);
-	
+
 	if (rc)
 		pr_err("%s:unable to parse device tree for pan intf\n",
 			__func__);
@@ -1083,7 +1083,7 @@ static void mdp3_iommu_meta_destroy(struct kref *kref)
 
 static void mdp3_iommu_meta_put(struct mdp3_iommu_meta *meta)
 {
-	
+
 	mutex_lock(&mdp3_res->iommu_lock);
 	kref_put(&meta->ref, mdp3_iommu_meta_destroy);
 	mutex_unlock(&mdp3_res->iommu_lock);
@@ -1191,7 +1191,7 @@ static int mdp3_iommu_map_iommu(struct mdp3_iommu_meta *meta,
 		goto out1;
 	}
 
-	
+
 	if (padding) {
 		unsigned long phys_addr = sg_phys(table->sgl);
 		ret = msm_iommu_map_extra(domain, meta->iova_addr, phys_addr,
@@ -1200,7 +1200,7 @@ static int mdp3_iommu_map_iommu(struct mdp3_iommu_meta *meta,
 			goto out1;
 	}
 
-	
+
 	ret = iommu_map_range(domain, meta->iova_addr + padding,
 			table->sgl, size, prot);
 	if (ret) {
@@ -1210,7 +1210,7 @@ static int mdp3_iommu_map_iommu(struct mdp3_iommu_meta *meta,
 		goto out2;
 	}
 
-	
+
 	if (padding) {
 		unsigned long phys_addr = sg_phys(table->sgl);
 		unsigned long extra_iova_addr = meta->iova_addr +
@@ -1291,7 +1291,7 @@ int mdp3_self_map_iommu(struct ion_client *client, struct ion_handle *handle,
 
 	padding = PAGE_ALIGN(padding);
 
-	
+
 	iova_length = size + 2 * padding;
 
 	if (size & ~PAGE_MASK) {
@@ -1433,8 +1433,8 @@ int mdp3_get_img(struct msmfb_data *img, struct mdp3_img_data *data,
 			ret = ion_map_iommu(iclient, data->srcp_ihdl, dom,
 					0, SZ_4K, 0, start, len, 0, 0);
 		} else {
-			ret = mdp3_self_map_iommu(iclient, data->srcp_ihdl,
-				SZ_4K, data->padding, start, len, 0, 0);
+			ret = ion_map_iommu(iclient, data->srcp_ihdl, dom,
+			    0, SZ_4K, 0, start, len, 0, 0);
 		}
 		if (IS_ERR_VALUE(ret)) {
 			ion_free(iclient, data->srcp_ihdl);
@@ -1541,7 +1541,7 @@ static int mdp3_alloc(size_t size, void **virt, unsigned long *phys)
 		}
 
 		ret = ion_phys(mdp3_res->ion_client, mdp3_res->ion_handle,
-				phys, &size);
+				&phys, &size);
 		if (ret) {
 			pr_err("%s ion_phys error\n", __func__);
 			goto ion_map_phys_err;
@@ -1610,7 +1610,7 @@ int mdp3_parse_dt_splash(struct msm_fb_data_type *mfd)
 
 void mdp3_release_splash_memory(void)
 {
-	
+
 	if (mdp3_res->splash_mem_addr) {
 		pr_debug("mdp3_release_splash_memory\n");
 		memblock_free(mdp3_res->splash_mem_addr,

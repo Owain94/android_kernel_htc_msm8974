@@ -35,7 +35,7 @@ static long venc_secure(struct v4l2_subdev *sd);
 struct index_bitmap {
 	unsigned long *bitmap;
 	int size;
-	int size_bits; 
+	int size_bits;
 };
 
 struct venc_inst {
@@ -66,7 +66,7 @@ static const int subscribed_events[] = {
 
 int venc_load_fw(struct v4l2_subdev *sd)
 {
-	
+
 	return 0;
 }
 
@@ -262,7 +262,7 @@ static int venc_vidc_callback_thread(void *data)
 					WFD_MSG_WARN(
 						"Failed to invalidate cache %d\n",
 						rc);
-					
+
 				}
 
 				inst->vmops.op_buffer_done(
@@ -327,7 +327,7 @@ static void unsubscribe_events(struct venc_inst *inst)
 		event.type = subscribed_events[c];
 		rc = msm_vidc_unsubscribe_event(inst->vidc_context, &event);
 		if (rc) {
-			
+
 			WFD_MSG_WARN("Failed to unsubscribe to event 0x%x\n",
 					subscribed_events[c]);
 		}
@@ -358,7 +358,7 @@ static long venc_open(struct v4l2_subdev *sd, void *arg)
 	}
 
 	inst->vmops = *vmops;
-	inst->secure = vmops->secure; 
+	inst->secure = vmops->secure;
 	INIT_LIST_HEAD(&inst->registered_output_bufs.list);
 	INIT_LIST_HEAD(&inst->registered_input_bufs.list);
 	init_completion(&inst->dq_complete);
@@ -463,7 +463,7 @@ static long venc_get_buffer_req(struct v4l2_subdev *sd, void *arg)
 	}
 
 	inst = (struct venc_inst *)sd->dev_priv;
-	
+
 	v4l2_bufreq = (struct v4l2_requestbuffers) {
 		.count = bufreq->count,
 		.type = BUF_TYPE_OUTPUT,
@@ -476,7 +476,7 @@ static long venc_get_buffer_req(struct v4l2_subdev *sd, void *arg)
 		goto venc_buf_req_fail;
 	}
 
-	
+
 	v4l2_format.type = BUF_TYPE_OUTPUT;
 	rc = msm_vidc_g_fmt(inst->vidc_context, &v4l2_format);
 	if (rc) {
@@ -516,7 +516,7 @@ static long venc_set_buffer_req(struct v4l2_subdev *sd, void *arg)
 
 	inst = (struct venc_inst *)sd->dev_priv;
 
-	
+
 	v4l2_bufreq = (struct v4l2_requestbuffers) {
 		.count = bufreq->count,
 		.type = BUF_TYPE_INPUT,
@@ -529,7 +529,7 @@ static long venc_set_buffer_req(struct v4l2_subdev *sd, void *arg)
 		goto venc_buf_req_fail;
 	}
 
-	
+
 	v4l2_format.type = BUF_TYPE_INPUT;
 	rc = msm_vidc_g_fmt(inst->vidc_context, &v4l2_format);
 	if (rc) {
@@ -821,7 +821,7 @@ static int venc_unmap_user_to_kernel(struct venc_inst *inst,
 	if (mregion->paddr) {
 		ion_unmap_iommu(venc_ion_client, mregion->ion_handle,
 				domain, partition);
-		mregion->paddr = NULL;
+		mregion->paddr = 0;
 	}
 
 	if (!IS_ERR_OR_NULL(mregion->kvaddr)) {
@@ -856,7 +856,7 @@ static long venc_set_output_buffer(struct v4l2_subdev *sd, void *arg)
 
 	inst = (struct venc_inst *)sd->dev_priv;
 
-	
+
 	if (get_registered_mregion(&inst->registered_output_bufs, mregion)) {
 		WFD_MSG_ERR("Duplicate output buffer\n");
 		rc = -EEXIST;
@@ -969,7 +969,7 @@ static long venc_set_format(struct v4l2_subdev *sd, void *arg)
 		goto venc_set_format_fail;
 	}
 
-	
+
 	if (inst->secure) {
 		rc = venc_secure(sd);
 		if (rc) {
@@ -1164,7 +1164,7 @@ static long venc_encode_frame(struct v4l2_subdev *sd, void *arg)
 
 static long venc_alloc_recon_buffers(struct v4l2_subdev *sd, void *arg)
 {
-	
+
 	return 0;
 }
 
@@ -1269,7 +1269,7 @@ venc_free_input_buffer_fail:
 
 static long venc_free_recon_buffers(struct v4l2_subdev *sd, void *arg)
 {
-	
+
 	return 0;
 }
 

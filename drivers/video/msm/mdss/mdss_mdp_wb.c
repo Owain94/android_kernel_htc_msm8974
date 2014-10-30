@@ -60,6 +60,7 @@ struct mdss_mdp_wb_data {
 	struct msmfb_data buf_info;
 	struct mdss_mdp_data buf_data;
 	int state;
+	bool user_alloc;
 };
 
 static DEFINE_MUTEX(mdss_mdp_wb_buf_lock);
@@ -442,22 +443,6 @@ static struct mdss_mdp_wb_data *get_user_node(struct msm_fb_data_type *mfd,
 register_fail:
 	kfree(node);
 	return NULL;
-}
-
-static void mdss_mdp_wb_free_node(struct mdss_mdp_wb_data *node)
-{
-	struct mdss_mdp_img_data *buf;
-
-	if (node->user_alloc) {
-		buf = &node->buf_data.p[0];
-		pr_debug("free user node mem_id=%d offset=%u addr=0x%pa\n",
-				node->buf_info.memory_id,
-				node->buf_info.offset,
-				&buf->addr);
-
-		mdss_mdp_put_img(&node->buf_data.p[0]);
-		node->user_alloc = false;
-	}
 }
 
 static int mdss_mdp_wb_queue(struct msm_fb_data_type *mfd,

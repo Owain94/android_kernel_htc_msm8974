@@ -80,7 +80,7 @@ static int mdss_mdp_get_fbmem_base(unsigned long *phys, size_t *size)
 		return -ENOMEM;
 	}
 
-	
+
 	ion_phys(iclient, ihdl, phys, size);
 	ion_free(iclient, ihdl);
 
@@ -299,7 +299,7 @@ int mdss_register_irq(struct mdss_hw *hw)
 	spin_unlock_irqrestore(&mdss_lock, irq_flags);
 
 	return 0;
-} 
+}
 EXPORT_SYMBOL(mdss_register_irq);
 
 void mdss_enable_irq(struct mdss_hw *hw)
@@ -442,7 +442,7 @@ int mdss_mdp_bus_scale_set_quota(u64 ab_quota, u64 ib_quota)
 		vect = mdp_bus_scale_table.usecase[mdss_res->current_bus_idx].
 			vectors;
 
-		
+
 		if ((ALIGN(ab_quota, SZ_64M) == ALIGN(vect->ab, SZ_64M)) &&
 			(ALIGN(ib_quota, SZ_64M) == ALIGN(vect->ib, SZ_64M))) {
 			pr_debug("skip bus scaling, no change in vectors\n");
@@ -1040,7 +1040,7 @@ int mdss_hw_init(struct mdss_data_type *mdata)
 	mdata->mdp_rev = MDSS_MDP_REG_READ(MDSS_MDP_REG_HW_VERSION);
 	pr_info_once("MDP Rev=%x\n", mdata->mdp_rev);
 
-	
+
 	writel_relaxed(0x0, mdata->mdp_base +
 			MDSS_MDP_REG_VIDEO_INTF_UNDERFLOW_CTL);
 
@@ -1059,7 +1059,7 @@ int mdss_hw_init(struct mdss_data_type *mdata)
 		for (j = 0; j < ENHIST_LUT_ENTRIES; j++)
 			writel_relaxed(j, offset);
 
-		
+
 		writel_relaxed(1, offset + 4);
 	}
 	vig = mdata->vig_pipes;
@@ -1068,7 +1068,7 @@ int mdss_hw_init(struct mdss_data_type *mdata)
 			MDSS_MDP_REG_VIG_HIST_LUT_BASE;
 		for (j = 0; j < ENHIST_LUT_ENTRIES; j++)
 			writel_relaxed(j, offset);
-		
+
 		writel_relaxed(1, offset + 16);
 	}
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
@@ -1250,7 +1250,7 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 	mdata->irq = res->start;
 	mdss_mdp_hw.ptr = mdata;
 
-	
+
 	rc = mdss_mdp_parse_dt(pdev);
 	if (rc) {
 		pr_err("unable to parse device tree\n");
@@ -1400,13 +1400,13 @@ static int mdss_mdp_get_pan_cfg(struct mdss_panel_cfg *pan_cfg)
 	} else if (pan_name[0] == '1') {
 		pan_cfg->lk_cfg = true;
 	} else {
-		
+
 		pan_cfg->lk_cfg = true;
 		pan_cfg->pan_intf = MDSS_PANEL_INTF_INVALID;
 		return -EINVAL;
 	}
 
-	
+
 	strlcpy(pan_name, &pan_name[2], MDSS_MAX_PANEL_LEN);
 	t = strnstr(pan_name, ":", MDSS_MAX_PANEL_LEN);
 	if (!t) {
@@ -1420,7 +1420,7 @@ static int mdss_mdp_get_pan_cfg(struct mdss_panel_cfg *pan_cfg)
 		pan_intf_str[i] = *(pan_name + i);
 	pan_intf_str[i] = 0;
 	pr_debug("%s:%d panel intf %s\n", __func__, __LINE__, pan_intf_str);
-	
+
 	t = t + 1;
 	strlcpy(&pan_cfg->arg_cfg[0], t, sizeof(pan_cfg->arg_cfg));
 	pr_debug("%s:%d: t=[%s] panel name=[%s]\n", __func__, __LINE__,
@@ -1467,7 +1467,7 @@ static int mdss_mdp_parse_bootarg(struct platform_device *pdev)
 	panel_name = &pan_cfg->arg_cfg[0];
 	intf_type = &pan_cfg->pan_intf;
 
-	
+
 	pan_cfg->lk_cfg = true;
 
 	chosen_node = of_find_node_by_name(NULL, "chosen");
@@ -1536,7 +1536,7 @@ static int mdss_mdp_parse_bootarg(struct platform_device *pdev)
 
 get_dt_pan:
 	rc = mdss_mdp_parse_dt_pan_intf(pdev);
-	
+
 	if (rc)
 		pr_err("%s:unable to parse device tree for pan intf\n",
 			__func__);
@@ -2012,7 +2012,7 @@ static int mdss_mdp_parse_dt_smp(struct platform_device *pdev)
 						mmb, k, mdata->smp_mb_cnt);
 					return -EINVAL;
 				}
-				
+
 				set_bit(mmb, pipe->smp_map[0].fixed);
 			}
 			if (bitmap_intersects(pipe->smp_map[0].fixed,
