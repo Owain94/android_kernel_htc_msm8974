@@ -60,11 +60,11 @@ unsigned int uint2float(unsigned int uintval)
 
 	exp = ilog2(uintval);
 
-	
+
 	if (23 > exp)
 		frac = (uintval & (~(1 << exp))) << (23 - exp);
 
-	
+
 	exp = (exp + 127) << 23;
 
 	return exp | frac;
@@ -72,7 +72,7 @@ unsigned int uint2float(unsigned int uintval)
 
 static void set_gmem_copy_quad(struct gmem_shadow_t *shadow)
 {
-	
+
 	gmem_copy_quad[1] = uint2float(shadow->height);
 	gmem_copy_quad[3] = uint2float(shadow->width);
 	gmem_copy_quad[4] = uint2float(shadow->height);
@@ -95,20 +95,20 @@ void build_quad_vtxbuff(struct adreno_context *drawctxt,
 {
 	 unsigned int *cmd = *incmd;
 
-	
+
 	shadow->quad_vertices.hostptr = cmd;
 	shadow->quad_vertices.gpuaddr = virt2gpu(cmd, &drawctxt->gpustate);
 
 	cmd += QUAD_LEN;
 
-	
+
 	shadow->quad_vertices_restore.hostptr = cmd;
 	shadow->quad_vertices_restore.gpuaddr =
 		virt2gpu(cmd, &drawctxt->gpustate);
 
 	cmd += QUAD_RESTORE_LEN;
 
-	
+
 	shadow->quad_texcoords.hostptr = cmd;
 	shadow->quad_texcoords.gpuaddr = virt2gpu(cmd, &drawctxt->gpustate);
 
@@ -130,7 +130,7 @@ static int _check_context_timestamp(struct kgsl_device *device,
 {
 	int ret = 0;
 
-	
+
 	if (kgsl_context_detached(&drawctxt->base) ||
 		drawctxt->state != ADRENO_CONTEXT_STATE_ACTIVE)
 		return 1;
@@ -157,7 +157,7 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 	if (drawctxt->state == ADRENO_CONTEXT_STATE_INVALID)
 		return -EDEADLK;
 
-	
+
 	BUG_ON(!mutex_is_locked(&device->mutex));
 
 	trace_adreno_drawctxt_wait_start(context->id, timestamp);
@@ -167,14 +167,10 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 	if (ret)
 		goto done;
 
-<<<<<<< HEAD
-
 	io_cnt = (io_cnt + 1) % 100;
 	io = (io_cnt < pwr->pwrlevels[pwr->active_pwrlevel].io_fraction)
 		? 0 : 1;
 
-=======
->>>>>>> 973c455... msm: kgsl: Remove io_fraction as it is no longer used
 	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
 	if (timeout) {
@@ -200,12 +196,12 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 
 	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
-	
+
 	if (drawctxt->state == ADRENO_CONTEXT_STATE_INVALID)
 		ret = -EDEADLK;
 
 
-	
+
 	if (kgsl_context_detached(context))
 		ret = -EINVAL;
 
@@ -226,7 +222,7 @@ static void global_wait_callback(struct kgsl_device *device, void *priv, u32 id,
 static int _check_global_timestamp(struct kgsl_device *device,
 		struct adreno_context *drawctxt, unsigned int timestamp)
 {
-	
+
 	if (drawctxt->state == ADRENO_CONTEXT_STATE_INVALID)
 		return 1;
 
@@ -241,7 +237,7 @@ int adreno_drawctxt_wait_global(struct adreno_device *adreno_dev,
 	struct adreno_context *drawctxt = ADRENO_CONTEXT(context);
 	int ret = 0;
 
-	
+
 	BUG_ON(!mutex_is_locked(&device->mutex));
 
 	if (!_kgsl_context_get(context)) {
@@ -298,7 +294,7 @@ void adreno_drawctxt_invalidate(struct kgsl_device *device,
 
 	drawctxt->state = ADRENO_CONTEXT_STATE_INVALID;
 
-	
+
 	mutex_lock(&drawctxt->mutex);
 
 	kgsl_sharedmem_writel(device, &device->memstore,
@@ -329,7 +325,7 @@ void adreno_drawctxt_invalidate(struct kgsl_device *device,
 
 	mutex_unlock(&drawctxt->mutex);
 
-	
+
 	wake_up_all(&drawctxt->waiting);
 	wake_up_all(&drawctxt->wq);
 }
@@ -365,7 +361,7 @@ adreno_drawctxt_create(struct kgsl_device_private *dev_priv,
 		KGSL_CONTEXT_TYPE_MASK |
 		KGSL_CONTEXT_PWR_CONSTRAINT);
 
-	
+
 	drawctxt->base.flags |= KGSL_CONTEXT_PER_CONTEXT_TS;
 	drawctxt->type = (drawctxt->base.flags & KGSL_CONTEXT_TYPE_MASK)
 	>> KGSL_CONTEXT_TYPE_SHIFT;
@@ -397,7 +393,7 @@ adreno_drawctxt_create(struct kgsl_device_private *dev_priv,
 	kgsl_sharedmem_writel(device, &device->memstore,
 			KGSL_MEMSTORE_OFFSET(drawctxt->base.id, eoptimestamp),
 			0);
-	
+
 	*flags = drawctxt->base.flags;
 	return &drawctxt->base;
 err:
@@ -425,7 +421,7 @@ int adreno_drawctxt_detach(struct kgsl_context *context)
 	adreno_dev = ADRENO_DEVICE(device);
 	drawctxt = ADRENO_CONTEXT(context);
 
-	
+
 	if (adreno_dev->drawctxt_active == drawctxt)
 		adreno_drawctxt_switch(adreno_dev, NULL, 0);
 
@@ -450,7 +446,7 @@ int adreno_drawctxt_detach(struct kgsl_context *context)
 	mutex_unlock(&drawctxt->mutex);
 	BUG_ON(!mutex_is_locked(&device->mutex));
 
-	
+
 	ret = adreno_drawctxt_wait_global(adreno_dev, context,
 		drawctxt->internal_timestamp, 10 * 1000);
 
@@ -470,7 +466,7 @@ int adreno_drawctxt_detach(struct kgsl_context *context)
 	if (drawctxt->ops && drawctxt->ops->detach)
 		drawctxt->ops->detach(drawctxt);
 
-	
+
 	wake_up_all(&drawctxt->waiting);
 	wake_up_all(&drawctxt->wq);
 
@@ -500,14 +496,14 @@ int adreno_context_restore(struct adreno_device *adreno_dev,
 
 	device = &adreno_dev->dev;
 
-	
+
 	cmds[0] = cp_nop_packet(1);
 	cmds[1] = KGSL_CONTEXT_TO_MEM_IDENTIFIER;
 	cmds[2] = cp_type3_packet(CP_MEM_WRITE, 2);
 	cmds[3] = device->memstore.gpuaddr +
 		KGSL_MEMSTORE_OFFSET(KGSL_MEMSTORE_GLOBAL, current_context);
 	cmds[4] = context->base.id;
-	
+
 	cmds[5] = cp_type0_packet(
 		adreno_getreg(adreno_dev, ADRENO_REG_UCHE_INVALIDATE0), 2);
 	cmds[6] = 0;
@@ -558,11 +554,11 @@ int adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 		if (flags & KGSL_CONTEXT_SAVE_GMEM)
 			set_bit(ADRENO_CONTEXT_GMEM_SAVE, &drawctxt->priv);
 		else
-			
+
 			clear_bit(ADRENO_CONTEXT_GMEM_SAVE, &drawctxt->priv);
 	}
 
-	
+
 	if (adreno_dev->drawctxt_active == drawctxt) {
 		if (drawctxt && drawctxt->ops->draw_workaround)
 			ret = drawctxt->ops->draw_workaround(adreno_dev,
@@ -584,7 +580,7 @@ int adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 
 	}
 
-	
+
 	if (drawctxt) {
 		if (!_kgsl_context_get(&drawctxt->base))
 			return -EINVAL;
@@ -594,7 +590,7 @@ int adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 			adreno_dev->drawctxt_active ?
 			adreno_dev->drawctxt_active->base.id :
 			KGSL_CONTEXT_INVALID);
-		
+
 		ret = drawctxt->ops->restore(adreno_dev, drawctxt);
 		if (ret) {
 			KGSL_DRV_ERR(device,
@@ -607,7 +603,7 @@ int adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 					 device->mmu.defaultpagetable,
 					adreno_dev->drawctxt_active->base.id);
 	}
-	
+
 	if (adreno_dev->drawctxt_active)
 		kgsl_context_put(&adreno_dev->drawctxt_active->base);
 	adreno_dev->drawctxt_active = drawctxt;
