@@ -361,8 +361,8 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	unsigned int val = 0;
-	int ret, level;
+	unsigned int val = 0, level = 0;
+	int ret;
 
 	if (device == NULL)
 		return 0;
@@ -375,7 +375,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 
 	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 	level = _get_nearest_pwrlevel(pwr, val);
-	if (level < 0)
+	if (level < 0 || level > 7)
 		goto done;
 
 	pwr->thermal_pwrlevel = level - 2;
@@ -409,8 +409,8 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	unsigned int val = 0;
-	int ret, level;
+	unsigned int val = 0, level = 0;
+	int ret;
 
 	if (device == NULL)
 		return 0;
@@ -1027,6 +1027,7 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 
 	
 
+	/* Initialize with extremes else devfreq will prevent OC */
 	pwr->max_pwrlevel = 0;
 	pwr->min_pwrlevel = pdata->num_levels - 2; /* min = 6 (100Mhz) */
 	pwr->thermal_pwrlevel = 0;
