@@ -33,16 +33,6 @@ DOM_LOGFILE="/data/local/tmp/dom.log"
 PVS="`cat /sys/module/clock_krait_8974/parameters/pvs_number`"
 echo PVS: $PVS >> $DOM_LOGFILE;
 
-# Disable MPD, enable intelliplug
-if [ -e /sys/module/intelli_plug/parameters/intelli_plug_active ]; then
-	stop mpdecision
-	echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-	echo "[kernel] IntelliPlug enabled" | tee -a $DOM_LOGFILE;
-else
-	echo "[kernel] IntelliPlug not found, using MPDecision" | tee -a $DOM_LOGFILE;
-	start mpdecision
-fi
-
 # Set TCP westwood
 if [ -e /proc/sys/net/ipv4/tcp_congestion_control ]; then
 	echo "westwood" > /proc/sys/net/ipv4/tcp_congestion_control
