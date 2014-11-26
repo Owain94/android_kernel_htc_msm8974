@@ -1,4 +1,0 @@
-service kernel-sh /system/bin/sh /init.kernel.sh
-	class late_start
-	user root
-	oneshot
