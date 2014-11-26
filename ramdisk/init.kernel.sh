@@ -78,6 +78,16 @@ if [ -e /sys/devices/platform/kcal_ctrl.0/kcal ]; then
 	echo "[kernel] LCD_KCAL: red=[$sd_r], green=[$sd_g], blue=[$sd_b]" | tee -a $DOM_LOGFILE;
 fi
 
+# Disable MPD, enable intelliplug
+if [ -e /sys/module/intelli_plug/parameters/intelli_plug_active ]; then
+	stop mpdecision
+	echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+	echo "[furnace] IntelliPlug enabled" | tee /dev/kmsg
+else
+	echo "[furnace] IntelliPlug not found, using MPDecision" | tee /dev/kmsg
+	start mpdecision
+fi
+
 # Freq
 if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
 	echo "2265600" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
