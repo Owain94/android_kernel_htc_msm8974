@@ -28,7 +28,7 @@ struct kgsl_power_stats {
 struct kgsl_pwrscale {
 	struct devfreq *devfreq;
 	struct devfreq_dev_profile profile;
-	unsigned int freq_table[KGSL_MAX_PWRLEVELS];
+	unsigned long freq_table[KGSL_MAX_PWRLEVELS];
 	char last_governor[DEVFREQ_NAME_LEN];
 	struct kgsl_power_stats accum_stats;
 	bool enabled;
