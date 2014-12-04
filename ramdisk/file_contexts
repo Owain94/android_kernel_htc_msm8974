@@ -249,21 +249,6 @@
 /mnt/asec/[^/]+/[^/]+\.zip  u:object_r:asec_public_file:s0
 /mnt/asec/[^/]+/lib(/.*)?   u:object_r:asec_public_file:s0
 /data/app-asec(/.*)?        u:object_r:asec_image_file:s0
-#line 1 "vendor/cm/sepolicy/file_contexts"
-/cache/dalvik-cache(/.*)? u:object_r:dalvikcache_data_file:s0
-
-# Auditd is a logging daemon. Put it into logd's context
-/system/bin/auditd        u:object_r:logd_exec:s0
-/data/misc/audit(/.*)?    u:object_r:auditd_log:s0
-
-#############################
-# performance-related sysfs files (CM)
-/sys/kernel/mm/ksm(/.*)?       --          u:object_r:sysfs_writable:s0
-/sys/devices/system/cpu.*/cpufreq(/.*)? --  u:object_r:sysfs_devices_system_cpu:s0
-/sys/block/mmcblk0/queue/scheduler  --    u:object_r:sysfs_writable:s0
-
-/data/hostapd(/.*)?         u:object_r:wifi_data_file:s0
-/data/misc/radio(/.*)?      u:object_r:radio_data_file:s0
 #line 1 "device/qcom/sepolicy/common/file_contexts"
 ###################################
 # Dev nodes
@@ -340,6 +325,7 @@
 /dev/socket/qlogd                               u:object_r:qlogd_socket:s0
 /dev/socket/ipacm_log_file                      u:object_r:ipacm_socket:s0
 /dev/socket/dpmd                                u:object_r:dpmd_socket:s0
+/dev/socket/dpmwrapper                          u:object_r:dpmwrapper_socket:s0
 /dev/socket/pps                                 u:object_r:pps_socket:s0
 /dev/socket/rild2                               u:object_r:rild_socket:s0
 /dev/socket/rild2-debug                         u:object_r:rild_debug_socket:s0
@@ -465,14 +451,14 @@
 /data/rfs.*                                                         u:object_r:rfs_data_file:s0
 /data/camera(/.*)?                                                  u:object_r:camera_socket:s0
 /data/system/sensors(/.*)?                                          u:object_r:sensors_data_file:s0
-/data/time/*                                                        u:object_r:time_data_file:s0
+/data/time(/.*)?                                                    u:object_r:time_data_file:s0
 /data/nfc(/.*)?                                                     u:object_r:nfc_data_file:s0
 /data/system/perfd(/.*)?                                            u:object_r:mpctl_data_file:s0
 /data/misc/perfd(/.*)?                                              u:object_r:mpctl_socket:s0
 /data/misc/display(/.*)?                                            u:object_r:display_config:s0
 /data/misc/ipa(/.*)?                                                u:object_r:ipacm_data_file:s0
 /data/dpm(/.*)?                                                     u:object_r:dpmd_data_file:s0
-/data/data/app_ms(/.*)?                                             u:object_r:data_drm_file:s0
+/data/misc/qsee(/.*)?                                               u:object_r:data_qsee_file:s0
 /data/misc/location(/.*)?                                           u:object_r:location_data_file:s0
 
 ###################################
@@ -547,3 +533,53 @@
 /system/bin/test-fake-ap                        u:object_r:location_exec:s0
 /system/bin/loc_api_app                         u:object_r:location_exec:s0
 /system/bin/test_loc_api_client                 u:object_r:location_exec:s0
+#line 1 "device/htc/m8/sepolicy/file_contexts"
+/system/bin/cir_fw_update	u:object_r:cir_fw_update_exec:s0
+/system/bin/hcheck		u:object_r:hcheck_exec:s0
+
+/system/blobs/gsm/bin/netmgrd	u:object_r:netmgrd_exec:s0
+/system/blobs/gsm/bin/qmuxd	u:object_r:qmuxd_exec:s0
+/system/blobs/spr/bin/netmgrd	u:object_r:netmgrd_exec:s0
+/system/blobs/spr/bin/qmuxd	u:object_r:qmuxd_exec:s0
+/system/blobs/vzw/bin/netmgrd	u:object_r:netmgrd_exec:s0
+/system/blobs/vzw/bin/qmuxd	u:object_r:qmuxd_exec:s0
+
+/dev/block/mmcblk0p(.*)		u:object_r:mmc_block_device:s0
+/dev/ttyHSL2			u:object_r:cir_device:s0
+
+/dev/rawchip(.*)		u:object_r:camera_socket:s0
+/data/cam_socket1		u:object_r:camera_socket:s0
+/data/cam_socket2		u:object_r:camera_socket:s0
+/data/cam_socket3		u:object_r:camera_socket:s0
+
+/data/system/default_values	u:object_r:mpctl_data_file:s0
+
+/sys/devices/virtual/htc_sensorhub/sensor_hub/tap2wake	 u:object_r:tap2wake_dev:s0
+#line 1 "vendor/cm/sepolicy/file_contexts"
+/cache/dalvik-cache(/.*)? u:object_r:dalvikcache_data_file:s0
+
+# Auditd is a logging daemon. Put it into logd's context
+/system/bin/auditd        u:object_r:logd_exec:s0
+/data/misc/audit(/.*)?    u:object_r:auditd_log:s0
+
+/system/bin/sysinit       u:object_r:sysinit_exec:s0
+
+# For minivold in recovery
+/sbin/minivold            u:object_r:vold_exec:s0
+
+#############################
+# performance-related sysfs files (CM)
+/sys/kernel/mm/ksm(/.*)?       --          u:object_r:sysfs_writable:s0
+/sys/devices/system/cpu.*/cpufreq(/.*)? --  u:object_r:sysfs_devices_system_cpu:s0
+/sys/block/mmcblk0/queue/scheduler  --    u:object_r:sysfs_writable:s0
+
+/data/hostapd(/.*)?         u:object_r:wifi_data_file:s0
+/data/misc/radio(/.*)?      u:object_r:radio_data_file:s0
+
+#############
+# Superuser's control sockets
+/dev/com.android.settings.daemon(/.*)?   u:object_r:superuser_device:s0
+/dev/com.android.settings(/.*)?   u:object_r:superuser_device:s0
+
+# Expansion of these hooks is a bit unconventional
+/cache/com.cyanogenmod.keyhandler.dex   u:object_r:dalvikcache_data_file:s0
