@@ -167,9 +167,9 @@ int adreno_drawctxt_wait(struct adreno_device *adreno_dev,
 	if (ret)
 		goto done;
 
-	io_cnt = (io_cnt + 1) % 100;
-	io = (io_cnt < pwr->pwrlevels[pwr->active_pwrlevel].io_fraction)
-		? 0 : 1;
+	//io_cnt = (io_cnt + 1) % 100;
+	//io = (io_cnt < pwr->pwrlevels[pwr->active_pwrlevel].io_fraction)
+	//	? 0 : 1;
 
 	kgsl_mutex_unlock(&device->mutex, &device->mutex_owner);
 
